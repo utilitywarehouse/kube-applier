@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -43,4 +44,12 @@ func WaitForDir(path string, clock ClockInterface, interval time.Duration) error
 		clock.Sleep(interval)
 	}
 	return nil
+}
+
+func ReadFile(path string) ([]string, error) {
+	fileContent, err := ioutil.ReadFile(path)
+	if err != nil {
+		return []string{}, err
+	}
+	return strings.Split(string(fileContent), "\n"), nil
 }

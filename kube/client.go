@@ -39,7 +39,7 @@ var pruneWhitelist = []string{
 
 // ClientInterface allows for mocking out the functionality of Client when testing the full process of an apply run.
 type ClientInterface interface {
-	Apply(string) (string, string, error)
+	Apply(path string, dryRun bool) (string, string, error)
 	CheckVersion() error
 }
 
@@ -48,7 +48,6 @@ type ClientInterface interface {
 type Client struct {
 	Server string
 	Label  string
-	DryRun bool
 }
 
 // Configure writes the kubeconfig file to be used for authenticating kubectl commands.
@@ -139,8 +138,8 @@ func isCompatible(clientMajor, clientMinor, serverMajor, serverMinor string) err
 
 // Apply attempts to "kubectl apply" the file located at path.
 // It returns the full apply command and its output.
-func (c *Client) Apply(path string) (string, string, error) {
-	args := []string{"kubectl", "apply", fmt.Sprintf("--dry-run=%t", c.DryRun), "-R", "-f", path, "--prune", fmt.Sprintf("-l %s!=false", c.Label), "-n", filepath.Base(path)}
+func (c *Client) Apply(path string, dryRun bool) (string, string, error) {
+	args := []string{"kubectl", "apply", fmt.Sprintf("--dry-run=%t", dryRun), "-R", "-f", path, "--prune", fmt.Sprintf("-l %s!=false", c.Label), "-n", filepath.Base(path)}
 	for _, w := range pruneWhitelist {
 		args = append(args, "--prune-whitelist="+w)
 	}
