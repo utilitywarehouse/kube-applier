@@ -77,6 +77,12 @@ func main() {
 		Desc:   "K8s label that applier will use to filter resources. Add label with value 'false' on resource to filter out resource. Resourses with missing label are not filtered out.",
 		EnvVar: "LABEL",
 	})
+	disabledNamespacesPath := app.String(cli.StringOpt{
+		Name:   "disabled-namespaces-file-path",
+		Value:  "/disabled-namespaces",
+		Desc:   "File containing \n separated list of namespaces against which the kube-applier will run in dry-run mode",
+		EnvVar: "DISABLED_NAMESPACES_FILE_PATH",
+	})
 
 	if *diffURLFormat != "" && !strings.Contains(*diffURLFormat, "%s") {
 		log.Fatalf("Invalid DIFF_URL_FORMAT, must contain %q: %v", "%s", *diffURLFormat)
@@ -91,10 +97,13 @@ func main() {
 			log.Fatal(err)
 		}
 
-		kubeClient := &kube.Client{Server: *server, Label: *label, DryRun: *dryRun}
+		kubeClient := &kube.Client{Server: *server, Label: *label}
 		kubeClient.Configure()
-
-		batchApplier := &run.BatchApplier{kubeClient, metrics}
+		dn, err := sysutil.ReadFile(*disabledNamespacesPath)
+		if err != nil {
+			log.Printf("WARN: Could not read %v, all namespaces are enabled: error=(%v)", *disabledNamespacesPath, err)
+		}
+		batchApplier := &run.BatchApplier{KubeClient: kubeClient, DryRun: *dryRun, DisabledNamespaces: dn, Metrics: metrics}
 		gitUtil := &git.GitUtil{*repoPath}
 
 		// Webserver and scheduler send run requests to runQueue channel, runner receives the requests and initiates runs.

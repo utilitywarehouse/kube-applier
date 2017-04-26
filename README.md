@@ -54,6 +54,7 @@ We suggest running kube-applier as a Deployment (see [demo/](https://github.com/
   * `extensions/v1beta1/Ingress`
   * `apps/v1beta1/StatefulSet`
   * `autoscaling/v1/HorizontalPodAutoscaler`
+* `DISABLED_NAMESPACES_FILE_PATH` - (string) Path to a file which contains `\n` separated namespaces against which the applier will run in dry-run mode. If the file is missing or empty all namespaces are enabled.
 
 ### Mounting the Git Repository
 
