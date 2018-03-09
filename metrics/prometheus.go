@@ -11,6 +11,7 @@ import (
 type PrometheusInterface interface {
 	UpdateNamespaceSuccess(string, bool)
 	UpdateRunLatency(float64, bool)
+	UpdateLogCount(level string)
 }
 
 // Prometheus implements instrumentation of metrics for kube-applier.
@@ -19,6 +20,7 @@ type PrometheusInterface interface {
 type Prometheus struct {
 	namespaceApplyCount *prometheus.CounterVec
 	runLatency          *prometheus.HistogramVec
+	logCount            *prometheus.CounterVec
 }
 
 // Init creates and registers the custom metrics for kube-applier.
@@ -44,8 +46,18 @@ func (p *Prometheus) Init() {
 		},
 	)
 
+	p.logCount = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "log_count",
+		Help: "Logs produced",
+	},
+		[]string{
+			// Level
+			"level",
+		},
+	)
 	prometheus.MustRegister(p.namespaceApplyCount)
 	prometheus.MustRegister(p.runLatency)
+	prometheus.MustRegister(p.logCount)
 }
 
 // UpdateNamespaceSuccess increments the given namespace's Counter for either successful apply attempts or failed apply attempts.
@@ -60,4 +72,11 @@ func (p *Prometheus) UpdateRunLatency(runLatency float64, success bool) {
 	p.runLatency.With(prometheus.Labels{
 		"success": strconv.FormatBool(success),
 	}).Observe(runLatency)
+}
+
+// UpdateLogCount increments logs counter for given log level
+func (p *Prometheus) UpdateLogCount(level string) {
+	p.logCount.With(prometheus.Labels{
+		"level": level,
+	}).Inc()
 }

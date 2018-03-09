@@ -101,6 +101,8 @@ func main() {
 		metrics := &metrics.Prometheus{}
 		metrics.Init()
 
+		log.Logger.StartMetrics(metrics)
+
 		clock := &sysutil.Clock{}
 
 		if err := sysutil.WaitForDir(*repoPath, clock, waitForRepoInterval); err != nil {
