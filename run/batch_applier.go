@@ -62,7 +62,7 @@ func (a *BatchApplier) Apply(applyList []string) ([]ApplyAttempt, []ApplyAttempt
 		}
 
 		var kustomize bool
-		if _, err := os.Stat(path + "kustomization.yaml"); err == nil {
+		if _, err := os.Stat(path + "/kustomization.yaml"); err == nil {
 			kustomize = true
 		}
 
