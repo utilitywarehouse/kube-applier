@@ -196,7 +196,7 @@ func (c *Client) Apply(path, namespace string, dryRun, prune, strict, kustomize 
 
 	kubectlCmd := exec.Command(args[0], args[1:]...)
 
-	var stdout []byte
+	var out []byte
 	var err error
 
 	if kustomize {
@@ -212,15 +212,15 @@ func (c *Client) Apply(path, namespace string, dryRun, prune, strict, kustomize 
 			return "kustomize build " + path + " | " + strings.Join(args, " "), "", err
 		}
 
-		stdout, err = kubectlCmd.Output()
+		out, err = kubectlCmd.CombinedOutput()
 		if err != nil {
-			return "kustomize build " + path + " | " + strings.Join(args, " "), string(stdout), err
+			return "kustomize build " + path + " | " + strings.Join(args, " "), string(out), err
 		}
 	} else {
-		stdout, err = kubectlCmd.CombinedOutput()
+		out, err = kubectlCmd.CombinedOutput()
 	}
 
-	return strings.Join(args, " "), string(stdout), err
+	return strings.Join(args, " "), string(out), err
 }
 
 // GetNamespaceStatus returns the AutmaticDeployment label for the given namespace
