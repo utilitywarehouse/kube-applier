@@ -200,21 +200,21 @@ func (c *Client) Apply(path, namespace string, dryRun, prune, strict, kustomize 
 	var err error
 
 	if kustomize {
-		kustomizeCmd := exec.Command("kustomize", "build")
+		kustomizeCmd := exec.Command("kustomize", "build", path)
 		pipe, err := kustomizeCmd.StdoutPipe()
 		if err != nil {
-			return "kustomize build | " + strings.Join(args, " "), "", err
+			return "kustomize build " + path + " | " + strings.Join(args, " "), "", err
 		}
 		kubectlCmd.Stdin = pipe
 
 		err = kustomizeCmd.Start()
 		if err != nil {
-			return "kustomize build | " + strings.Join(args, " "), "", err
+			return "kustomize build " + path + " | " + strings.Join(args, " "), "", err
 		}
 
 		stdout, err = kubectlCmd.Output()
 		if err != nil {
-			return "kustomize build | " + strings.Join(args, " "), string(stdout), err
+			return "kustomize build " + path + " | " + strings.Join(args, " "), string(stdout), err
 		}
 	} else {
 		stdout, err = kubectlCmd.CombinedOutput()
