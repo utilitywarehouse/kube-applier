@@ -161,12 +161,17 @@ func isCompatible(clientMajor, clientMinor, serverMajor, serverMinor string) err
 	return nil
 }
 
-// Apply attempts to "kubectl apply" the file located at path.
-// It returns the full apply command and its output.
+// Apply attempts to "kubectl apply" the files located at path. It returns the
+// full apply command and its output.
 //
-// StrictApply will attempt to "kubectl apply" the file located at path using a `kube-applier` service account under the given namespace.
-// `kube-applier` service account must exist for the given namespace and must contain a secret that include token and ca.cert.
-// It returns the full apply command and its output.
+// strict - attempt to "kubectl apply" the files located at path using a
+//          `kube-applier` service account under the given namespace.
+//          `kube-applier` service account must exist for the given namespace and
+//          must contain a secret that include token and ca.cert.  It returns the
+//          full apply command and its output.
+//
+// kustomize - Do a `kuztomize build` on the path before piping to `kubectl
+//             apply`, set to if there is a `kustomization.yaml` found in the path
 func (c *Client) Apply(path, namespace string, dryRun, prune, strict, kustomize bool) (string, string, error) {
 	var args []string
 
