@@ -7,7 +7,6 @@ import (
 	"github.com/utilitywarehouse/kube-applier/kube"
 	"github.com/utilitywarehouse/kube-applier/log"
 	"github.com/utilitywarehouse/kube-applier/metrics"
-	"github.com/utilitywarehouse/kube-applier/mock_kube"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +25,7 @@ func TestBatchApplierApply(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
 
-	kubeClient := mock_kube.NewMockClientInterface(mockCtrl)
+	kubeClient := kube.NewMockClientInterface(mockCtrl)
 	metrics := metrics.NewMockPrometheusInterface(mockCtrl)
 
 	// Empty apply list
@@ -282,19 +281,19 @@ func TestBatchApplierApply(t *testing.T) {
 	applyAndAssert(t, tc)
 }
 
-func expectCheckVersionAndReturnNil(kubeClient *mock_kube.MockClientInterface) *gomock.Call {
+func expectCheckVersionAndReturnNil(kubeClient *kube.MockClientInterface) *gomock.Call {
 	return kubeClient.EXPECT().CheckVersion().Times(1).Return(nil)
 }
 
-func expectApplyAndReturnSuccess(file, namespace string, dryRun, prune bool, kubeClient *mock_kube.MockClientInterface) *gomock.Call {
+func expectApplyAndReturnSuccess(file, namespace string, dryRun, prune bool, kubeClient *kube.MockClientInterface) *gomock.Call {
 	return kubeClient.EXPECT().Apply(file, namespace, dryRun, prune, false, false).Times(1).Return("cmd "+file, "output "+file, nil)
 }
 
-func expectApplyAndReturnFailure(file, namespace string, dryRun, prune bool, kubeClient *mock_kube.MockClientInterface) *gomock.Call {
+func expectApplyAndReturnFailure(file, namespace string, dryRun, prune bool, kubeClient *kube.MockClientInterface) *gomock.Call {
 	return kubeClient.EXPECT().Apply(file, namespace, dryRun, prune, false, false).Times(1).Return("cmd "+file, "output "+file, fmt.Errorf("error "+file))
 }
 
-func expectGetNamespaceStatusAndReturn(ret kube.AutomaticDeploymentOption, namespace string, kubeClient *mock_kube.MockClientInterface) *gomock.Call {
+func expectGetNamespaceStatusAndReturn(ret kube.AutomaticDeploymentOption, namespace string, kubeClient *kube.MockClientInterface) *gomock.Call {
 	return kubeClient.EXPECT().GetNamespaceStatus(namespace).Times(1).Return(ret, nil)
 }
 
