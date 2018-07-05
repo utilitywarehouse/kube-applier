@@ -218,17 +218,13 @@ func (c *Client) Apply(path, namespace string, dryRun, prune, strict, kustomize 
 		if err != nil {
 			return cmdStr, "", err
 		}
-
-		out, err = kubectlCmd.CombinedOutput()
-		if err != nil {
-			return cmdStr, string(out), err
-		}
 	} else {
 		cmdStr = strings.Join(args, " ")
-		out, err = kubectlCmd.CombinedOutput()
-		if err != nil {
-			return cmdStr, string(out), err
-		}
+	}
+
+	out, err = kubectlCmd.CombinedOutput()
+	if err != nil {
+		return cmdStr, string(out), err
 	}
 
 	return cmdStr, string(out), err
