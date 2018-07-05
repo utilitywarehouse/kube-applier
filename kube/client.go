@@ -226,6 +226,9 @@ func (c *Client) Apply(path, namespace string, dryRun, prune, strict, kustomize 
 	} else {
 		cmdStr = strings.Join(args, " ")
 		out, err = kubectlCmd.CombinedOutput()
+		if err != nil {
+			return cmdStr, string(out), err
+		}
 	}
 
 	return cmdStr, string(out), err
