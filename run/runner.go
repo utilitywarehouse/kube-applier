@@ -1,6 +1,8 @@
 package run
 
 import (
+	"path/filepath"
+
 	"github.com/utilitywarehouse/kube-applier/git"
 	"github.com/utilitywarehouse/kube-applier/log"
 	"github.com/utilitywarehouse/kube-applier/metrics"
@@ -9,15 +11,16 @@ import (
 
 // Runner manages the full process of an apply run, including getting the appropriate files, running apply commands on them, and handling the results.
 type Runner struct {
-	RepoPath      string
-	BatchApplier  BatchApplierInterface
-	GitUtil       git.GitUtilInterface
-	Clock         sysutil.ClockInterface
-	Metrics       metrics.PrometheusInterface
-	DiffURLFormat string
-	RunQueue      <-chan bool
-	RunResults    chan<- Result
-	Errors        chan<- error
+	RepoPath          string
+	BatchApplier      BatchApplierInterface
+	GitUtil           git.GitUtilInterface
+	Clock             sysutil.ClockInterface
+	Metrics           metrics.PrometheusInterface
+	IgnoredNamespaces []string
+	DiffURLFormat     string
+	RunQueue          <-chan bool
+	RunResults        chan<- Result
+	Errors            chan<- error
 }
 
 // Start runs a continuous loop that starts a new run when a request comes into the queue channel.
@@ -42,6 +45,8 @@ func (r *Runner) run() (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	dirs = filterOutNamespaces(r.IgnoredNamespaces, dirs)
+
 	hash, err := r.GitUtil.HeadHash()
 	if err != nil {
 		return nil, err
@@ -62,4 +67,24 @@ func (r *Runner) run() (*Result, error) {
 
 	newRun := Result{start, finish, hash, commitLog, successes, failures, r.DiffURLFormat}
 	return &newRun, nil
+}
+
+func filterOutNamespaces(ignoredNamespaces, dirs []string) []string {
+	var res []string
+
+	for _, dir := range dirs {
+		ns := filepath.Base(dir)
+
+		found := false
+		for _, ignoredNamespace := range ignoredNamespaces {
+			if ignoredNamespace == ns {
+				found = true
+			}
+		}
+
+		if !found {
+			res = append(res, dir)
+		}
+	}
+	return res
 }
