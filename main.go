@@ -89,6 +89,12 @@ func main() {
 		Desc:   "Log level [trace|debug|info|warn|error] case insensitive",
 		EnvVar: "LOG_LEVEL",
 	})
+	ignoredNamespaces := app.Strings(cli.StringsOpt{
+		Name:   "ignored-namespaces",
+		Value:  []string{},
+		Desc:   "Namespaces to ignore",
+		EnvVar: "IGNORED_NAMESPACES",
+	})
 
 	log.InitLogger(*logLevel)
 
@@ -138,15 +144,16 @@ func main() {
 		errors := make(chan error)
 
 		runner := &run.Runner{
-			RepoPath:      *repoPath,
-			BatchApplier:  batchApplier,
-			GitUtil:       gitUtil,
-			Clock:         clock,
-			Metrics:       metrics,
-			DiffURLFormat: *diffURLFormat,
-			RunQueue:      runQueue,
-			RunResults:    runResults,
-			Errors:        errors,
+			RepoPath:          *repoPath,
+			BatchApplier:      batchApplier,
+			GitUtil:           gitUtil,
+			Clock:             clock,
+			Metrics:           metrics,
+			DiffURLFormat:     *diffURLFormat,
+			RunQueue:          runQueue,
+			RunResults:        runResults,
+			Errors:            errors,
+			IgnoredNamespaces: *ignoredNamespaces,
 		}
 		scheduler := &run.Scheduler{
 			GitUtil:         gitUtil,
