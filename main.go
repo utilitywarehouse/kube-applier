@@ -59,7 +59,7 @@ func validate() {
 	if diffURLFormat == "" {
 		diffURLFormat = "https://github.com/utilitywarehouse/kubernetes-manifests/commit/%s"
 	} else if !strings.Contains(diffURLFormat, "%s") {
-		fmt.Sprintf("Invalid DIFF_URL_FORMAT, must contain %q: %v\n", "%s", diffURLFormat)
+		fmt.Printf("Invalid DIFF_URL_FORMAT, must contain %q: %v\n", "%s", diffURLFormat)
 		os.Exit(1)
 	}
 
