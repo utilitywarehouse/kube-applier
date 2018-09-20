@@ -1,5 +1,3 @@
-// go:generate mockgen -package=metrics -destination=mock_prometheus.go -source prometheus.go
-
 package metrics
 
 import (
