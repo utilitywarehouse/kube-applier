@@ -157,7 +157,7 @@ func main() {
 		Metrics:     metrics,
 	}
 
-	gitUtil := &git.GitUtil{
+	gitUtil := &git.Util{
 		RepoPath: repoPath,
 	}
 
