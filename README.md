@@ -56,10 +56,12 @@ Given that the `$REPO_PATH` directory is a Git repo or located within one, it is
 
 **If I remove a configuration file, will kube-applier remove the associated Kubernetes object?**
 
-No. If a file is removed from the `$REPO_PATH` directory, kube-applier will no longer apply the file, but kube-applier **WILL NOT** delete the cluster object(s) described by the file. These objects must be manually cleaned up using `kubectl delete`.
+Yes, in most situations. If a file is removed from the `$REPO_PATH` directory, kube-applier will no longer apply the file, and it **WILL** delete the cluster object(s) described by the file, accordingly to a white list (currently defined in variable `pruneWhitelist` located in [client.go](kube/client.go)).
 
 ## Monitoring
+
 ### Status UI
+
 ![screenshot](https://github.com/box/kube-applier/raw/master/static/img/status_page_screenshot.png "Status Page Screenshot")
 
 kube-applier hosts a status page on a webserver, served at the service endpoint URL. The status page displays information about the most recent apply run, including:
@@ -73,6 +75,7 @@ kube-applier hosts a status page on a webserver, served at the service endpoint 
 The HTML template for the status page lives in `templates/status.html`, and `static/` holds additional assets.
 
 ### Metrics
+
 kube-applier uses [Prometheus](https://github.com/prometheus/client_golang) for metrics. Metrics are hosted on the webserver at /metrics (status UI is the index page). In addition to the Prometheus default metrics, the following custom metrics are included:
 * **run_latency_seconds** - A [Summary](https://godoc.org/github.com/prometheus/client_golang/prometheus#Summary) that keeps track of the durations of each apply run, tagged with a boolean for whether or not the run was a success (i.e. no failed apply attempts).
 * **file_apply_count** - A [Counter](https://godoc.org/github.com/prometheus/client_golang/prometheus#Counter) for each file that has had an apply attempt over the lifetime of the container, incremented with each apply attempt and tagged by the filepath and the result of the attempt.
