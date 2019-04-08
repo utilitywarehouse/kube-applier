@@ -23,16 +23,17 @@ const (
 )
 
 var (
-	repoPath        = os.Getenv("REPO_PATH")
-	repoPathFilters = os.Getenv("REPO_PATH_FILTERS")
-	listenPort      = os.Getenv("LISTEN_PORT")
-	pollInterval    = os.Getenv("POLL_INTERVAL_SECONDS")
-	fullRunInterval = os.Getenv("FULL_RUN_INTERVAL_SECONDS")
-	dryRun          = os.Getenv("DRY_RUN")
-	prune           = os.Getenv("KUBE_PRUNE")
-	strictApply     = os.Getenv("STRICT_APPLY")
-	label           = os.Getenv("LABEL")
-	logLevel        = os.Getenv("LOG_LEVEL")
+	repoPath         = os.Getenv("REPO_PATH")
+	repoPathFilters  = os.Getenv("REPO_PATH_FILTERS")
+	listenPort       = os.Getenv("LISTEN_PORT")
+	pollInterval     = os.Getenv("POLL_INTERVAL_SECONDS")
+	fullRunInterval  = os.Getenv("FULL_RUN_INTERVAL_SECONDS")
+	dryRun           = os.Getenv("DRY_RUN")
+	prune            = os.Getenv("KUBE_PRUNE")
+	strictApply      = os.Getenv("STRICT_APPLY")
+	label            = os.Getenv("LABEL")
+	logLevel         = os.Getenv("LOG_LEVEL")
+	kustomizeEnabled = os.Getenv("KUSTOMIZE_ENABLED")
 
 	// kube server. Mainly for local testing.
 	server = os.Getenv("SERVER")
@@ -124,6 +125,16 @@ func validate() {
 	if logLevel == "" {
 		logLevel = "warn"
 	}
+
+	if kustomizeEnabled == "" {
+		kustomizeEnabled = "true"
+	} else {
+		_, err := strconv.ParseBool(kustomizeEnabled)
+		if err != nil {
+			fmt.Println("KUSTOMIZE_ENABLED must be a boolean")
+			os.Exit(1)
+		}
+	}
 }
 
 func main() {
@@ -150,12 +161,15 @@ func main() {
 	dr, _ := strconv.ParseBool(dryRun)
 	pr, _ := strconv.ParseBool(prune)
 	sa, _ := strconv.ParseBool(strictApply)
+	ke, _ := strconv.ParseBool(kustomizeEnabled)
+
 	batchApplier := &run.BatchApplier{
-		KubeClient:  kubeClient,
-		DryRun:      dr,
-		Prune:       pr,
-		StrictApply: sa,
-		Metrics:     metrics,
+		KubeClient:       kubeClient,
+		DryRun:           dr,
+		Prune:            pr,
+		StrictApply:      sa,
+		KustomizeEnabled: ke,
+		Metrics:          metrics,
 	}
 
 	gitUtil := &git.Util{

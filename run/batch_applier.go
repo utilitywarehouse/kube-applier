@@ -25,11 +25,12 @@ type BatchApplierInterface interface {
 
 // BatchApplier makes apply calls for a batch of files, and updates metrics based on the results of each call.
 type BatchApplier struct {
-	KubeClient  kube.ClientInterface
-	Metrics     metrics.PrometheusInterface
-	DryRun      bool
-	Prune       bool
-	StrictApply bool
+	KubeClient       kube.ClientInterface
+	Metrics          metrics.PrometheusInterface
+	DryRun           bool
+	Prune            bool
+	StrictApply      bool
+	KustomizeEnabled bool
 }
 
 // Apply takes a list of files and attempts an apply command on each.
@@ -62,7 +63,7 @@ func (a *BatchApplier) Apply(applyList []string) ([]ApplyAttempt, []ApplyAttempt
 		}
 
 		var kustomize bool
-		if _, err := os.Stat(path + "/kustomization.yaml"); err == nil {
+		if _, err := os.Stat(path + "/kustomization.yaml"); err == nil && a.KustomizeEnabled {
 			kustomize = true
 		}
 
