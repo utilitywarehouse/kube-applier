@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: parentdir
+spec:
+  containers:
+  - image: busybox
+    imagePullPolicy: Always
+    name: busybox
