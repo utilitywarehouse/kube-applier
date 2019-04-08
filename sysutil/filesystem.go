@@ -18,6 +18,13 @@ func ListDirs(rootPath string) ([]string, error) {
 
 	for _, file := range files {
 		if file.IsDir() {
+			// go thru look for other directories.
+			childDirs, err := ListDirs(filepath.Join(rootPath, file.Name()))
+			if err != nil {
+				return dirs, fmt.Errorf("Could not read %s error=(%v)", rootPath, err)
+			}
+			dirs = append(dirs, childDirs...)
+
 			dirs = append(dirs, filepath.Join(rootPath, file.Name()))
 		}
 	}
