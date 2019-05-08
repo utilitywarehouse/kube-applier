@@ -7,7 +7,7 @@ RUN apk --no-cache add git gcc musl-dev && \
  CGO_ENABLED=0 go build -o /kube-applier .
 
 FROM alpine
-ENV KUBECTL_VERSION v1.12.3
+ENV KUBECTL_VERSION v1.13.5
 ENV KUSTOMIZE_VERSION 2.0.1
 COPY templates/* /templates/
 COPY static/ /static/
