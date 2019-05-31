@@ -46,13 +46,19 @@ func (a *BatchApplier) Apply(applyList []string) ([]ApplyAttempt, []ApplyAttempt
 			log.Logger.Error("Error while getting namespace status, defaulting to off", "error", err)
 		}
 		var disabled bool
+		var prune bool
 		switch s {
 		case kube.On:
 			disabled = false
+			prune = a.Prune
 		case kube.Off:
 			continue
 		case kube.DryRun:
 			disabled = true
+			prune = a.Prune
+		case kube.NoPrune:
+			disabled = false
+			prune = false
 		default:
 			continue
 		}
@@ -67,7 +73,7 @@ func (a *BatchApplier) Apply(applyList []string) ([]ApplyAttempt, []ApplyAttempt
 		}
 
 		var cmd, output string
-		cmd, output, err = a.KubeClient.Apply(path, ns, a.ServiceAccount, a.DryRun || disabled, a.Prune, kustomize)
+		cmd, output, err = a.KubeClient.Apply(path, ns, a.ServiceAccount, a.DryRun || disabled, prune, kustomize)
 		success := (err == nil)
 		appliedFile := ApplyAttempt{path, cmd, output, ""}
 		if success {

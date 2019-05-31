@@ -53,9 +53,10 @@ type AutomaticDeploymentOption string
 
 // Automatic Deployment labels
 const (
-	DryRun AutomaticDeploymentOption = "dry-run"
-	On     AutomaticDeploymentOption = "on"
-	Off    AutomaticDeploymentOption = "off"
+	DryRun  AutomaticDeploymentOption = "dry-run"
+	On      AutomaticDeploymentOption = "on"
+	Off     AutomaticDeploymentOption = "off"
+	NoPrune AutomaticDeploymentOption = "on-no-prune"
 )
 
 // ClientInterface allows for mocking out the functionality of Client when testing the full process of an apply run.
