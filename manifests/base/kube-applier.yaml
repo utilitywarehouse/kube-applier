@@ -58,7 +58,7 @@ spec:
               mountPath: /root/
       containers:
         - name: kube-applier
-          image: quay.io/utilitywarehouse/kube-applier:v2.3.0
+          image: quay.io/utilitywarehouse/kube-applier:fix_ssh-file-perms
           securityContext:
             runAsUser: 65533
           env:
