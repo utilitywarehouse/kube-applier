@@ -72,6 +72,9 @@ spec:
             - name: git-repo
               mountPath: /src
               readOnly: true
+            - name: gs-gitconfig
+              mountPath: /tmp/.gitconfig
+              subPath: .gitconfig
           resources:
             requests:
               cpu: 10m
