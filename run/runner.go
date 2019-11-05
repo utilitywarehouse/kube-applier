@@ -2,8 +2,6 @@ package run
 
 import (
 	"fmt"
-	"path"
-	"path/filepath"
 
 	"github.com/utilitywarehouse/kube-applier/git"
 	"github.com/utilitywarehouse/kube-applier/log"
@@ -48,7 +46,7 @@ func (r *Runner) run() (*Result, error) {
 		return nil, err
 	}
 
-	dirs = r.pruneDirs(dirs)
+	dirs = sysutil.PruneDirs(dirs, r.RepoPathFilters)
 
 	hash, err := r.GitUtil.HeadHashForPaths(r.RepoPathFilters...)
 	if err != nil {
@@ -78,24 +76,4 @@ func (r *Runner) run() (*Result, error) {
 
 	newRun := Result{start, finish, hash, commitLog, successes, failures, r.DiffURLFormat}
 	return &newRun, nil
-}
-
-func (r *Runner) pruneDirs(dirs []string) []string {
-	if len(r.RepoPathFilters) == 0 {
-		return dirs
-	}
-
-	var prunedDirs []string
-	for _, dir := range dirs {
-		for _, repoPathFilter := range r.RepoPathFilters {
-			matched, err := filepath.Match(path.Join(r.RepoPath, repoPathFilter), dir)
-			if err != nil {
-				log.Logger.Error(err.Error())
-			} else if matched {
-				prunedDirs = append(prunedDirs, dir)
-			}
-		}
-	}
-
-	return prunedDirs
 }

@@ -58,6 +58,7 @@ type KAAnnotations struct {
 type ClientInterface interface {
 	Apply(path, namespace string, dryRun, prune, kustomize bool) (string, string, error)
 	NamespaceAnnotations(namespace string) (KAAnnotations, error)
+	NamespaceAnnotationsBatch(namespaces []string) (map[string]KAAnnotations, error)
 }
 
 // Client enables communication with the Kubernetes API Server through kubectl commands.
@@ -146,6 +147,22 @@ func (c *Client) Apply(path, namespace string, dryRun, prune, kustomize bool) (s
 	return cmdStr, string(out), err
 }
 
+type namespaceResponse struct {
+	Metadata struct {
+		Name        string
+		Annotations map[string]string
+	}
+}
+
+type namespaceResponseList struct {
+	Items []struct {
+		Metadata struct {
+			Name        string
+			Annotations map[string]string
+		}
+	}
+}
+
 // NamespaceAnnotations returns string values of kube-applier annotaions
 func (c *Client) NamespaceAnnotations(namespace string) (KAAnnotations, error) {
 	kaa := KAAnnotations{}
@@ -162,11 +179,7 @@ func (c *Client) NamespaceAnnotations(namespace string) (KAAnnotations, error) {
 	}
 	c.Metrics.UpdateKubectlExitCodeCount(namespace, 0)
 
-	var nr struct {
-		Metadata struct {
-			Annotations map[string]string
-		}
-	}
+	nr := namespaceResponse{}
 	if err := json.Unmarshal(stdout, &nr); err != nil {
 		return kaa, err
 	}
@@ -176,4 +189,50 @@ func (c *Client) NamespaceAnnotations(namespace string) (KAAnnotations, error) {
 	kaa.Prune = nr.Metadata.Annotations[pruneAnnotation]
 
 	return kaa, nil
+}
+
+// NamespaceAnnotationsBatch returns the kube-applier annotations for a list of namespaces as a map
+func (c *Client) NamespaceAnnotationsBatch(namespaces []string) (map[string]KAAnnotations, error) {
+	kaaMap := map[string]KAAnnotations{}
+
+	if len(namespaces) == 1 {
+		kaa, err := c.NamespaceAnnotations(namespaces[0])
+		if err != nil {
+			return kaaMap, err
+		}
+		kaaMap[namespaces[0]] = kaa
+
+		return kaaMap, nil
+	} else if len(namespaces) > 1 {
+		args := []string{"kubectl", "get", "namespace", "-o", "json"}
+		args = append(args, namespaces...)
+		if c.Server != "" {
+			args = append(args, fmt.Sprintf("--kubeconfig=%s", kubeconfigFilePath))
+		}
+
+		cmd := execCommand(args[0], args[1:]...)
+		stdout, err := cmd.Output()
+		if err != nil {
+			if e, ok := err.(*exec.ExitError); ok {
+				c.Metrics.UpdateKubectlExitCodeCount("", e.ExitCode())
+			}
+			return kaaMap, err
+		}
+		c.Metrics.UpdateKubectlExitCodeCount("", 0)
+
+		var nl namespaceResponseList
+		if err := json.Unmarshal(stdout, &nl); err != nil {
+			return kaaMap, err
+		}
+
+		for _, n := range nl.Items {
+			kaaMap[n.Metadata.Name] = KAAnnotations{
+				Enabled: n.Metadata.Annotations[enabledAnnotation],
+				DryRun:  n.Metadata.Annotations[dryRunAnnotation],
+				Prune:   n.Metadata.Annotations[pruneAnnotation],
+			}
+		}
+	}
+
+	return kaaMap, nil
 }

@@ -4,8 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
+
+	"github.com/utilitywarehouse/kube-applier/log"
 )
 
 // ListDirs walks the directory tree rooted at the path and adds all non-directory file paths to a []string.
@@ -40,4 +43,25 @@ func WaitForDir(path string, clock ClockInterface, interval time.Duration) error
 		clock.Sleep(interval)
 	}
 	return nil
+}
+
+// PruneDirs takes a list of directory paths and omits those that don't match at least one item in a list of patterns
+func PruneDirs(dirs []string, filters []string) []string {
+	if len(filters) == 0 {
+		return dirs
+	}
+
+	var prunedDirs []string
+	for _, dir := range dirs {
+		for _, filter := range filters {
+			matched, err := filepath.Match(path.Join(filepath.Dir(dir), filter), dir)
+			if err != nil {
+				log.Logger.Error(err.Error())
+			} else if matched {
+				prunedDirs = append(prunedDirs, dir)
+			}
+		}
+	}
+
+	return prunedDirs
 }

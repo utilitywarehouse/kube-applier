@@ -7,10 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/utilitywarehouse/kube-applier/git"
 	"github.com/utilitywarehouse/kube-applier/kube"
 	"github.com/utilitywarehouse/kube-applier/log"
 	"github.com/utilitywarehouse/kube-applier/metrics"
+	"github.com/utilitywarehouse/kube-applier/metrics/annotations"
 	"github.com/utilitywarehouse/kube-applier/run"
 	"github.com/utilitywarehouse/kube-applier/sysutil"
 	"github.com/utilitywarehouse/kube-applier/webserver"
@@ -159,6 +161,12 @@ func main() {
 		RunResults:      runResults,
 		Errors:          errors,
 	}
+
+	prometheus.MustRegister(&annotations.Collector{
+		RepoPath:        repoPath,
+		RepoPathFilters: repoPathFiltersSlice,
+		KubeClient:      kubeClient,
+	})
 
 	pi, _ := strconv.Atoi(pollInterval)
 	fi, _ := strconv.Atoi(fullRunInterval)

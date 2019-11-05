@@ -1,4 +1,4 @@
-package run
+package sysutil
 
 import (
 	"strings"
@@ -8,11 +8,7 @@ import (
 )
 
 func TestPruneDirsWithFilter(t *testing.T) {
-	runner := Runner{
-		RepoPath:        "/repo/",
-		RepoPathFilters: []string{"run", "webserver", "sys*", "?anifests"},
-	}
-
+	filters := []string{"run", "webserver", "sys*", "?anifests"}
 	dirs := strings.Split(`/repo/.git
 /repo/git
 /repo/kube
@@ -28,16 +24,12 @@ func TestPruneDirsWithFilter(t *testing.T) {
 /repo/webserver
 `, "\n")
 
-	prunedDirs := runner.pruneDirs(dirs)
+	prunedDirs := PruneDirs(dirs, filters)
 	assert.Len(t, prunedDirs, 5)
 }
 
 func TestPruneDirsWithoutFilter(t *testing.T) {
-	runner := Runner{
-		RepoPath:        "/repo/",
-		RepoPathFilters: []string{},
-	}
-
+	filters := []string{}
 	dirs := strings.Split(`/repo/.git
 /repo/git
 /repo/kube
@@ -53,6 +45,6 @@ func TestPruneDirsWithoutFilter(t *testing.T) {
 /repo/webserver
 `, "\n")
 
-	prunedDirs := runner.pruneDirs(dirs)
+	prunedDirs := PruneDirs(dirs, filters)
 	assert.Len(t, prunedDirs, 14)
 }
