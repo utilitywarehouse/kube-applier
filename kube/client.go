@@ -1,7 +1,6 @@
 package kube
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -11,6 +10,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/utilitywarehouse/kube-applier/metrics"
 	"github.com/utilitywarehouse/kube-applier/sysutil"
+
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	// in case of local kube config
+	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
 )
 
 const (
@@ -63,12 +68,13 @@ type ClientInterface interface {
 // Client enables communication with the Kubernetes API Server through kubectl commands.
 // The Server field enables discovery of the API server when kube-proxy is not configured (see README.md for more information).
 type Client struct {
-	Server  string
-	Label   string
-	Metrics metrics.PrometheusInterface
+	Server    string
+	Label     string
+	Metrics   metrics.PrometheusInterface
+	NsWatcher *namespaceWatcher
 }
 
-// Configure writes the kubeconfig file to be used for authenticating kubectl commands.
+// Configure writes the kubeconfig file to be used for authenticating kubectl commands and to watch namespaces.
 func (c *Client) Configure() error {
 	// No need to write a kubeconfig file if Server is not specified (API server will be discovered via kube-proxy).
 	if c.Server == "" {
@@ -100,6 +106,35 @@ func (c *Client) Configure() error {
 	if err := template.Execute(f, data); err != nil {
 		return errors.Wrap(err, "applying kubeconfig template failed")
 	}
+
+	return nil
+}
+
+// StartWatching creates a namespace watcher and starts it up
+func (c *Client) StartWatching() error {
+
+	// create a kube client to pass to the watcher
+	// If server is set we should expect config under kubeconfigFilePath
+	// else try to use in cluster config
+	var config *rest.Config
+	if c.Server != "" {
+		config, _ = clientcmd.BuildConfigFromFlags(
+			"", kubeconfigFilePath)
+	} else {
+		config, _ = rest.InClusterConfig()
+	}
+	kubeClient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return err
+	}
+
+	// resyncPeriod 0 means getting updates only on events and not also on
+	// static intervals
+	c.NsWatcher = newNamespaceWatcher(kubeClient, 0, c.Metrics)
+
+	// Start watching namespaces. ns watch start will block until stop is
+	// called so spawn a new routine for it
+	go c.NsWatcher.Start()
 
 	return nil
 }
@@ -166,31 +201,15 @@ func (c *Client) Apply(path, namespace string, dryRun, prune, kustomize bool) (s
 // NamespaceAnnotations returns string values of kube-applier annotaions
 func (c *Client) NamespaceAnnotations(namespace string) (KAAnnotations, error) {
 	kaa := KAAnnotations{}
-	args := []string{"kubectl", "get", "namespace", namespace, "-o", "json"}
-	if c.Server != "" {
-		args = append(args, fmt.Sprintf("--kubeconfig=%s", kubeconfigFilePath))
-	}
-	stdout, err := execCommand(args[0], args[1:]...).CombinedOutput()
+
+	ns, err := c.NsWatcher.Get(namespace)
 	if err != nil {
-		if e, ok := err.(*exec.ExitError); ok {
-			c.Metrics.UpdateKubectlExitCodeCount(namespace, e.ExitCode())
-		}
-		return kaa, err
-	}
-	c.Metrics.UpdateKubectlExitCodeCount(namespace, 0)
-
-	var nr struct {
-		Metadata struct {
-			Annotations map[string]string
-		}
-	}
-	if err := json.Unmarshal(stdout, &nr); err != nil {
 		return kaa, err
 	}
 
-	kaa.Enabled = nr.Metadata.Annotations[enabledAnnotation]
-	kaa.DryRun = nr.Metadata.Annotations[dryRunAnnotation]
-	kaa.Prune = nr.Metadata.Annotations[pruneAnnotation]
+	kaa.Enabled = ns.Annotations[enabledAnnotation]
+	kaa.DryRun = ns.Annotations[dryRunAnnotation]
+	kaa.Prune = ns.Annotations[pruneAnnotation]
 
 	return kaa, nil
 }

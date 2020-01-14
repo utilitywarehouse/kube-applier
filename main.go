@@ -120,6 +120,10 @@ func main() {
 		log.Logger.Error("kubectl configuration failed", "error", err)
 	}
 
+	if err := kubeClient.StartWatching(); err != nil {
+		log.Logger.Error("failed to start the namespace watcher", "error", err)
+	}
+
 	dr, _ := strconv.ParseBool(dryRun)
 	batchApplier := &run.BatchApplier{
 		KubeClient: kubeClient,

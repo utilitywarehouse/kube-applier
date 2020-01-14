@@ -18,6 +18,12 @@ type PrometheusInterface interface {
 	UpdateNamespaceSuccess(string, bool)
 	UpdateRunLatency(float64, bool)
 	UpdateResultSummary(map[string]string)
+	UpdateEnabled(string, bool)
+	DeleteEnabled(string)
+	UpdateDryRun(string, bool)
+	DeleteDryRun(string)
+	UpdatePrune(string, bool)
+	DeletePrune(string)
 }
 
 // Prometheus implements instrumentation of metrics for kube-applier.
@@ -29,6 +35,9 @@ type Prometheus struct {
 	namespaceApplyCount  *prometheus.CounterVec
 	runLatency           *prometheus.HistogramVec
 	resultSummary        *prometheus.GaugeVec
+	enabled              *prometheus.GaugeVec
+	dryRun               *prometheus.GaugeVec
+	prune                *prometheus.GaugeVec
 }
 
 // Init creates and registers the custom metrics for kube-applier.
@@ -79,10 +88,41 @@ func (p *Prometheus) Init() {
 			"action",
 		},
 	)
+	p.enabled = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "kube_applier_enabled",
+		Help: "kube-applier enabled flag status based on namespace annotations",
+	},
+		[]string{
+			// Namespace in question
+			"namespace",
+		},
+	)
+	p.dryRun = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "kube_applier_dry_run",
+		Help: "kube-applier dryRun flag status based on namespace annotations",
+	},
+		[]string{
+			// Namespace in question
+			"namespace",
+		},
+	)
+	p.prune = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "kube_applier_prune",
+		Help: "kube-applier prune flag status based on namespace annotations",
+	},
+		[]string{
+			// Namespace in question
+			"namespace",
+		},
+	)
+
 	prometheus.MustRegister(p.kubectlExitCodeCount)
 	prometheus.MustRegister(p.resultSummary)
 	prometheus.MustRegister(p.namespaceApplyCount)
 	prometheus.MustRegister(p.runLatency)
+	prometheus.MustRegister(p.enabled)
+	prometheus.MustRegister(p.dryRun)
+	prometheus.MustRegister(p.prune)
 }
 
 // UpdateKubectlExitCodeCount increments for each exit code returned by kubectl
@@ -122,6 +162,69 @@ func (p *Prometheus) UpdateResultSummary(failures map[string]string) {
 			}).Set(1)
 		}
 	}
+}
+
+// UpdateEnabled gets a namespace and a flag (bool) and updates the gauge to 0
+// or 1 depending on the flag status
+func (p *Prometheus) UpdateEnabled(namespace string, flag bool) {
+	if flag {
+		p.enabled.With(prometheus.Labels{
+			"namespace": namespace,
+		}).Set(1)
+	} else {
+		p.enabled.With(prometheus.Labels{
+			"namespace": namespace,
+		}).Set(0)
+	}
+}
+
+// DeleteEnabled deletes the metric where namespace label is matched
+func (p *Prometheus) DeleteEnabled(namespace string) {
+	p.enabled.Delete(prometheus.Labels{
+		"namespace": namespace,
+	})
+}
+
+// UpdateDryRun gets a namespace and a flag (bool) and updates the gauge to 0
+// or 1 depending on the flag status
+func (p *Prometheus) UpdateDryRun(namespace string, flag bool) {
+	if flag {
+		p.dryRun.With(prometheus.Labels{
+			"namespace": namespace,
+		}).Set(1)
+	} else {
+		p.dryRun.With(prometheus.Labels{
+			"namespace": namespace,
+		}).Set(0)
+	}
+}
+
+// DeleteDryRun deletes the metric where namespace label is matched
+func (p *Prometheus) DeleteDryRun(namespace string) {
+	p.dryRun.Delete(prometheus.Labels{
+		"namespace": namespace,
+	})
+}
+
+// UpdatePrune gets a namespace and a flag (bool) and updates the gauge to 0
+// or 1 depending on the flag status
+func (p *Prometheus) UpdatePrune(namespace string, flag bool) {
+	if flag {
+		p.prune.With(prometheus.Labels{
+			"namespace": namespace,
+		}).Set(1)
+	} else {
+		p.prune.With(prometheus.Labels{
+			"namespace": namespace,
+		}).Set(0)
+	}
+}
+
+// DeletePrune deletes the metric where namespace label is matched
+func (p *Prometheus) DeletePrune(namespace string) {
+	p.prune.Delete(prometheus.Labels{
+		"namespace": namespace,
+	})
 }
 
 // Result struct containing Type, Name and Action
