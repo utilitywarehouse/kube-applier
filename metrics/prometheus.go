@@ -180,6 +180,8 @@ func (p *Prometheus) UpdateEnabled(namespace string, flag bool) {
 
 // DeleteEnabled deletes the metric where namespace label is matched
 func (p *Prometheus) DeleteEnabled(namespace string) {
+	// func (GaugeVec) Delete: returns true if a metric was deleted and
+	// and false otherwise. No panic caused if metric doesn't exist
 	p.enabled.Delete(prometheus.Labels{
 		"namespace": namespace,
 	})

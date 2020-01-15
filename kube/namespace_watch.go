@@ -37,34 +37,58 @@ func newNamespaceWatcher(client kubernetes.Interface, resyncPeriod time.Duration
 func (nw *namespaceWatcher) updateNamespaceMetrics(ns *v1.Namespace) {
 	name := ns.Name
 
-	enabled, err := strconv.ParseBool(ns.Annotations[enabledAnnotation])
-	if err != nil {
-		log.Logger.Error(
-			"Error parsing namespace annotation kube-applier.io/enabled, metric not updated",
-			"namespace", name,
-			"error", err,
-		)
+	// Enabled
+	anno, ok := ns.Annotations[enabledAnnotation]
+	if !ok {
+		// Try to delete the metric since annotation is not found
+		nw.Metrics.DeleteEnabled(name)
 	} else {
+		// Parse annotation and update metric, set false if parsing errors
+		enabled, err := strconv.ParseBool(anno)
+		if err != nil {
+			log.Logger.Warn(
+				"Error parsing namespace annotation kube-applier.io/enabled, setting metric to false",
+				"namespace", name,
+				"error", err,
+			)
+			enabled = false
+
+		}
 		nw.Metrics.UpdateEnabled(name, enabled)
 	}
 
-	dryRun, err := strconv.ParseBool(ns.Annotations[dryRunAnnotation])
-	if err != nil {
-		log.Logger.Error("Error parsing namespace annotation kube-applier.io/dryRun, metric not updated",
-			"namespace", name,
-			"error", err,
-		)
+	// DryRun
+	anno, ok = ns.Annotations[dryRunAnnotation]
+	if !ok {
+		// Try to delete the metric since annotation is not found
+		nw.Metrics.DeleteDryRun(name)
 	} else {
+		// Parse annotation and update metric, set false if parsing errors
+		dryRun, err := strconv.ParseBool(anno)
+		if err != nil {
+			log.Logger.Warn("Error parsing namespace annotation kube-applier.io/dryRun, setting metric to false",
+				"namespace", name,
+				"error", err,
+			)
+			dryRun = false
+		}
 		nw.Metrics.UpdateDryRun(name, dryRun)
 	}
 
-	prune, err := strconv.ParseBool(ns.Annotations[pruneAnnotation])
-	if err != nil {
-		log.Logger.Error("Error parsing namespace annotation kube-applier.io/prune, metric not updated",
-			"namespace", name,
-			"error", err,
-		)
+	// Prune
+	anno, ok = ns.Annotations[pruneAnnotation]
+	if !ok {
+		// Try to delete the metric since annotation is not found
+		nw.Metrics.DeletePrune(name)
 	} else {
+		prune, err := strconv.ParseBool(anno)
+		if err != nil {
+			log.Logger.Warn("Error parsing namespace annotation kube-applier.io/prune, setting metric to false",
+				"namespace", name,
+				"error", err,
+			)
+			prune = false
+		}
 		nw.Metrics.UpdatePrune(name, prune)
 	}
 }
