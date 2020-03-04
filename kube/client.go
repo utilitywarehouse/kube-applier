@@ -3,13 +3,13 @@ package kube
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
 
 	"github.com/pkg/errors"
+
 	"github.com/utilitywarehouse/kube-applier/metrics"
 	"github.com/utilitywarehouse/kube-applier/sysutil"
 )
@@ -109,13 +109,13 @@ func (c *Client) Configure() error {
 // Apply attempts to "kubectl apply" the files located at path. It returns the
 // full apply command and its output.
 //
-// kustomize - Do a `kustomize build | kubectl apply -f -` on the path, set to if there is a
+// kustomize - Do a `kubectl apply -k` on the path, set to if there is a
 //             `kustomization.yaml` found in the path
 func (c *Client) Apply(path, namespace string, dryRun, prune, kustomize bool, pruneWhitelist []string) (string, string, error) {
 	var args []string
 
 	if kustomize {
-		args = []string{"kubectl", "apply", fmt.Sprintf("--server-dry-run=%t", dryRun), "-f", "-", "-n", namespace}
+		args = []string{"kubectl", "apply", fmt.Sprintf("--server-dry-run=%t", dryRun), "-k", path, "-n", namespace}
 	} else {
 		args = []string{"kubectl", "apply", fmt.Sprintf("--server-dry-run=%t", dryRun), "-R", "-f", path, "-n", namespace}
 	}
@@ -139,50 +139,14 @@ func (c *Client) Apply(path, namespace string, dryRun, prune, kustomize bool, pr
 
 	kubectlCmd := exec.Command(args[0], args[1:]...)
 
-	var cmdStr string
-	var kustomizeStderr io.ReadCloser
-	if kustomize {
-		cmdStr = "kustomize build " + path + " | " + strings.Join(args, " ")
-		kustomizeCmd := exec.Command("kustomize", "build", path)
-		kustomizeStdout, err := kustomizeCmd.StdoutPipe()
-		if err != nil {
-			return cmdStr, "", err
-		}
-		kubectlCmd.Stdin = kustomizeStdout
-		kustomizeStderr, err = kustomizeCmd.StderrPipe()
-		if err != nil {
-			return cmdStr, "", err
-		}
-
-		err = kustomizeCmd.Start()
-		if err != nil {
-			fmt.Printf("%s", err)
-			return cmdStr, "", err
-		}
-		defer func() {
-			io.Copy(ioutil.Discard, kustomizeStdout)
-			io.Copy(ioutil.Discard, kustomizeStderr)
-			err = kustomizeCmd.Wait()
-			if err != nil {
-				fmt.Printf("%s", err)
-			}
-		}()
-	} else {
-		cmdStr = strings.Join(args, " ")
-	}
+	cmdStr := strings.Join(args, " ")
 
 	out, err := kubectlCmd.CombinedOutput()
 	if err != nil {
 		if e, ok := err.(*exec.ExitError); ok {
 			c.Metrics.UpdateKubectlExitCodeCount(namespace, e.ExitCode())
 		}
-		var str strings.Builder
-		if kustomizeStderr != nil {
-			kustomizeErr, _ := ioutil.ReadAll(kustomizeStderr)
-			str.WriteString(string(kustomizeErr))
-		}
-		str.WriteString(string(out))
-		return cmdStr, str.String(), err
+		return cmdStr, string(out), err
 	}
 	c.Metrics.UpdateKubectlExitCodeCount(path, 0)
 
