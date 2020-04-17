@@ -103,6 +103,16 @@ func validate() {
 	if logLevel == "" {
 		logLevel = "warn"
 	}
+
+	if pruneBlacklist == "" {
+		// Kubernetes copies annotations from StatefulSets, Deployments and
+		// Daemonsets to the corresponding ControllerRevision, including
+		// 'kubectl.kubernetes.io/last-applied-configuration', which will result
+		// in kube-applier pruning ControllerRevisions that it shouldn't be
+		// managing at all. This makes it unsuitable for pruning and a
+		// reasonable default for blacklisting.
+		pruneBlacklist = "apps/v1/ControllerRevision"
+	}
 }
 
 func main() {
