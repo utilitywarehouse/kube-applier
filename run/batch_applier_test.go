@@ -121,7 +121,7 @@ func TestBatchApplierApply(t *testing.T) {
 		{"file1", "cmd file1", "output file1", ""},
 		{"file3", "cmd file3", "output file3", ""},
 	}
-	failures := []ApplyAttempt{
+	failures = []ApplyAttempt{
 		{"file2", "cmd file2", "Apply output omitted on error in case of sensitive data\n", "error file2"},
 		{"file4", "cmd file4", "Apply output omitted on error in case of sensitive data\n", "error file4"},
 	}
