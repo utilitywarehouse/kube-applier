@@ -85,9 +85,9 @@ func TestBatchApplierApply(t *testing.T) {
 		expectFailureMetric("file3", metrics),
 	)
 	failures := []ApplyAttempt{
-		{"file1", "cmd file1", "output file1", "error file1"},
-		{"file2", "cmd file2", "output file2", "error file2"},
-		{"file3", "cmd file3", "output file3", "error file3"},
+		{"file1", "cmd file1", "Apply output omitted on error in case of sensitive data\n", "error file1"},
+		{"file2", "cmd file2", "Apply output omitted on error in case of sensitive data\n", "error file2"},
+		{"file3", "cmd file3", "Apply output omitted on error in case of sensitive data\n", "error file3"},
 	}
 	tc = batchTestCase{
 		BatchApplier{
@@ -121,9 +121,9 @@ func TestBatchApplierApply(t *testing.T) {
 		{"file1", "cmd file1", "output file1", ""},
 		{"file3", "cmd file3", "output file3", ""},
 	}
-	failures = []ApplyAttempt{
-		{"file2", "cmd file2", "output file2", "error file2"},
-		{"file4", "cmd file4", "output file4", "error file4"},
+	failures := []ApplyAttempt{
+		{"file2", "cmd file2", "Apply output omitted on error in case of sensitive data\n", "error file2"},
+		{"file4", "cmd file4", "Apply output omitted on error in case of sensitive data\n", "error file4"},
 	}
 	tc = batchTestCase{
 		BatchApplier{
