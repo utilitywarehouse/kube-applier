@@ -543,6 +543,26 @@ func TestBatchApplierApplySuccessPruneBlacklist(t *testing.T) {
 	applyAndAssert(t, tc)
 }
 
+func TestSanitizeErrorMsg(t *testing.T) {
+	// Test error contains secret
+	errorMsg := `
+The  "" is invalid: patch: Invalid value: "map[data:map[eligibility_dsn:ICouldBeSensitive== type:Opaque] metadata:map[annotations:map[kubectl.kubernetes.io/last-applied-configuration:{\"apiVersion\":\"v1\",\"data\":{\"eligibility_dsn\":\"ICouldBeSensitive==\",\"fabricator_dsn\":\"ICouldBeSensitive==\",\"password\":\"ICouldBeSensitive==\",\"type\":\"Opaque\",\"username\":\"ICouldBeSensitive==\"},\"kind\":\"Secret\",\"metadata\":{\"annotations\":{},\"name\":\"sql\",\"namespace\":\"cashbackcard\"}}\n]] type:<nil>]": error decoding from json: illegal base64 data at input byte 4
+origin
+`
+	expected := "error message contains secret resources, omitting"
+
+	sanitized := sanitizeErrorMsg(errorMsg)
+	assert.Equal(t, expected, sanitized)
+
+	// Test error does not contain secret
+	errorMsg = `
+The  "" is invalid: patch: Invalid value: "map[data:map[eligibility_dsn:IAmNotSensitive type:Opaque] metadata:map[annotations:map[kubectl.kubernetes.io/last-applied-configuration:{\"apiVersion\":\"v1\",\"data\":{\"eligibility_dsn\":\"IAmNotSensitive\",\"fabricator_dsn\":\"IAmNotSensitive\",\"type\":\"Opaque\"},\"kind\":\"ConfigMap\",\"metadata\":{\"annotations\":{},\"name\":\"sql\",\"namespace\":\"cashbackcard\"}}\n]] type:<nil>]": error decoding from json: illegal base64 data at input byte 4
+origin
+`
+	sanitized = sanitizeErrorMsg(errorMsg)
+	assert.Equal(t, errorMsg, sanitized)
+}
+
 func expectApplyAndReturnSuccess(file, namespace string, dryRun bool, pruneWhitelist []string, kubectlClient *kubectl.MockClientInterface) *gomock.Call {
 	return kubectlClient.EXPECT().Apply(file, namespace, dryRun, false, pruneWhitelist).Times(1).Return("cmd "+file, "output "+file, nil)
 }

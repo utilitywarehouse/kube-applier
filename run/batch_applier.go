@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 
 	"github.com/utilitywarehouse/kube-applier/kube"
@@ -116,7 +117,7 @@ func (a *BatchApplier) Apply(applyList []string, options *ApplyOptions) ([]Apply
 			successes = append(successes, appliedFile)
 			log.Logger.Info(fmt.Sprintf("%v\n%v", cmd, output))
 		} else {
-			appliedFile.ErrorMessage = err.Error()
+			appliedFile.ErrorMessage = sanitizeErrorMsg(err.Error())
 			failures = append(failures, appliedFile)
 			log.Logger.Warn(fmt.Sprintf("%v\n%v\n%v", cmd, output, appliedFile.ErrorMessage))
 		}
@@ -125,4 +126,15 @@ func (a *BatchApplier) Apply(applyList []string, options *ApplyOptions) ([]Apply
 
 	}
 	return successes, failures
+}
+
+// sanitizeErrorMsg will look for Secret manifests in the error message and if
+// found it will replace the message with a generic error
+func sanitizeErrorMsg(msg string) string {
+	reg := regexp.MustCompile(`\\\"kind\\\":\\\"Secret\\\"`)
+	match := reg.MatchString(msg)
+	if match {
+		return "error message contains secret resources, omitting"
+	}
+	return msg
 }
