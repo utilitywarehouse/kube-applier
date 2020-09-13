@@ -105,30 +105,69 @@ The request is invalid: patch: Invalid value: "map[data:map[invalid:map[]] metad
 	}
 }
 
-func TestPruneArgs(t *testing.T) {
+func TestApplyArgs(t *testing.T) {
 	testCases := []struct {
+		path           string
+		namespace      string
+		dryRunStrategy string
 		pruneWhitelist []string
-		args           []string
 		want           []string
 	}{
 		{
+			path:           "/src/manifests/test/example",
+			namespace:      "example",
+			dryRunStrategy: "server",
 			pruneWhitelist: []string{"core/v1/ConfigMap", "core/v1/Pod", "rbac.authorization.k8s.io/v1beta1/RoleBinding"},
-			args:           []string{"kubectl", "apply", "-f", "/src/manifests/test/example", "-n", "example"},
-			want: []string{"kubectl", "apply", "-f", "/src/manifests/test/example", "-n", "example", "--prune", "--all",
+			want: []string{"kubectl", "apply", "-f", "/src/manifests/test/example", "-R", "-n", "example", "--dry-run=server",
+				"--prune", "--all",
 				"--prune-whitelist=core/v1/ConfigMap",
 				"--prune-whitelist=core/v1/Pod",
 				"--prune-whitelist=rbac.authorization.k8s.io/v1beta1/RoleBinding",
 			},
 		},
 		{
-			pruneWhitelist: []string{},
-			args:           []string{"kubectl", "apply", "-f", "/src/manifests/test/example", "-n", "example"},
-			want:           []string{"kubectl", "apply", "-f", "/src/manifests/test/example", "-n", "example"},
+			path:           "-",
+			namespace:      "example",
+			dryRunStrategy: "server",
+			pruneWhitelist: []string{"core/v1/ConfigMap", "core/v1/Pod", "rbac.authorization.k8s.io/v1beta1/RoleBinding"},
+			want: []string{"kubectl", "apply", "-f", "-", "-n", "example", "--dry-run=server",
+				"--prune", "--all",
+				"--prune-whitelist=core/v1/ConfigMap",
+				"--prune-whitelist=core/v1/Pod",
+				"--prune-whitelist=rbac.authorization.k8s.io/v1beta1/RoleBinding",
+			},
+		},
+		{
+			path:           "/src/manifests/test/example",
+			namespace:      "example",
+			pruneWhitelist: []string{"core/v1/ConfigMap", "core/v1/Pod", "rbac.authorization.k8s.io/v1beta1/RoleBinding"},
+			want: []string{"kubectl", "apply", "-f", "/src/manifests/test/example", "-R", "-n", "example",
+				"--prune", "--all",
+				"--prune-whitelist=core/v1/ConfigMap",
+				"--prune-whitelist=core/v1/Pod",
+				"--prune-whitelist=rbac.authorization.k8s.io/v1beta1/RoleBinding",
+			},
+		},
+		{
+			path:           "/src/manifests/test/example",
+			namespace:      "example",
+			dryRunStrategy: "server",
+			want:           []string{"kubectl", "apply", "-f", "/src/manifests/test/example", "-R", "-n", "example", "--dry-run=server"},
+		},
+		{
+			path:           "/src/manifests/test/example",
+			pruneWhitelist: []string{"core/v1/ConfigMap", "core/v1/Pod", "rbac.authorization.k8s.io/v1beta1/RoleBinding"},
+			want: []string{"kubectl", "apply", "-f", "/src/manifests/test/example", "-R",
+				"--prune", "--all",
+				"--prune-whitelist=core/v1/ConfigMap",
+				"--prune-whitelist=core/v1/Pod",
+				"--prune-whitelist=rbac.authorization.k8s.io/v1beta1/RoleBinding",
+			},
 		},
 	}
 
 	for _, tc := range testCases {
-		got := pruneArgs(tc.args, tc.pruneWhitelist)
+		got := applyArgs(tc.path, tc.namespace, tc.dryRunStrategy, tc.pruneWhitelist)
 
 		if diff := deep.Equal(got, tc.want); diff != nil {
 			t.Error(diff)

@@ -41,26 +41,18 @@ func (c *Client) Apply(path, namespace, dryRunStrategy string, kustomize bool, p
 	if kustomize {
 		return c.applyKustomize(path, namespace, dryRunStrategy, pruneWhitelist)
 	}
-	return c.apply(path, namespace, dryRunStrategy, pruneWhitelist)
+	return c.applyPath(path, namespace, dryRunStrategy, pruneWhitelist)
 }
 
-// apply runs `kubectl apply -f <path>`
-func (c *Client) apply(path, namespace, dryRunStrategy string, pruneWhitelist []string) (string, string, error) {
-	args := []string{"kubectl", "apply", fmt.Sprintf("--dry-run=%s", dryRunStrategy), "-R", "-f", path, "-n", namespace}
-	args = pruneArgs(args, pruneWhitelist)
-
-	kubectlCmd := exec.Command(args[0], args[1:]...)
-	out, err := kubectlCmd.CombinedOutput()
+// applyPath runs `kubectl apply -f <path>`
+func (c *Client) applyPath(path, namespace, dryRunStrategy string, pruneWhitelist []string) (string, string, error) {
+	cmdStr, out, err := c.apply(path, namespace, dryRunStrategy, pruneWhitelist, []byte{})
 	if err != nil {
-		if e, ok := err.(*exec.ExitError); ok {
-			c.Metrics.UpdateKubectlExitCodeCount(namespace, e.ExitCode())
-		}
 		// Filter potential secret leaks out of the output
-		return kubectlCmd.String(), filterErrOutput(string(out)), err
+		return cmdStr, filterErrOutput(out), err
 	}
-	c.Metrics.UpdateKubectlExitCodeCount(path, 0)
 
-	return kubectlCmd.String(), string(out), nil
+	return cmdStr, out, nil
 }
 
 // applyKustomize does a `kustomize build | kubectl apply -f -` on the path
@@ -89,20 +81,16 @@ func (c *Client) applyKustomize(path, namespace, dryRunStrategy string, pruneWhi
 		return kustomizeCmd.String(), "", fmt.Errorf("No resources were extracted from the kustomize output")
 	}
 
-	args := []string{"kubectl", "apply", fmt.Sprintf("--dry-run=%s", dryRunStrategy), "-f", "-", "-n", namespace}
-
 	// This is the command we are effectively applying. In actuality we're splitting it into two
 	// separate invocations of kubectl but we'll return this as the command
 	// string.
-	displayArgs := pruneArgs(args, pruneWhitelist)
+	displayArgs := applyArgs("-", namespace, dryRunStrategy, pruneWhitelist)
 	kubectlCmd := exec.Command(displayArgs[0], displayArgs[1:]...)
 	cmdStr := kustomizeCmd.String() + " | " + kubectlCmd.String()
 
-	var kubectlOut []byte
+	var kubectlOut string
 
 	if len(resources) > 0 {
-		resourcesArgs := args
-
 		// Don't prune secrets
 		resourcesPruneWhitelist := []string{}
 		for _, w := range pruneWhitelist {
@@ -110,25 +98,15 @@ func (c *Client) applyKustomize(path, namespace, dryRunStrategy string, pruneWhi
 				resourcesPruneWhitelist = append(resourcesPruneWhitelist, w)
 			}
 		}
-		resourcesArgs = pruneArgs(resourcesArgs, resourcesPruneWhitelist)
 
-		resourcesKubectlCmd := exec.Command(resourcesArgs[0], resourcesArgs[1:]...)
-		resourcesKubectlCmd.Stdin = bytes.NewReader(resources)
-
-		out, err := resourcesKubectlCmd.CombinedOutput()
-		kubectlOut = append(kubectlOut, out...)
+		_, out, err := c.apply("-", namespace, dryRunStrategy, resourcesPruneWhitelist, resources)
+		kubectlOut = kubectlOut + out
 		if err != nil {
-			if e, ok := err.(*exec.ExitError); ok {
-				c.Metrics.UpdateKubectlExitCodeCount(namespace, e.ExitCode())
-			}
-			return cmdStr, string(kubectlOut), err
+			return cmdStr, kubectlOut, err
 		}
-		c.Metrics.UpdateKubectlExitCodeCount(path, 0)
 	}
 
 	if len(secrets) > 0 {
-		secretsArgs := args
-
 		// Only prune secrets
 		var secretsPruneWhitelist []string
 		for _, w := range pruneWhitelist {
@@ -136,30 +114,62 @@ func (c *Client) applyKustomize(path, namespace, dryRunStrategy string, pruneWhi
 				secretsPruneWhitelist = append(secretsPruneWhitelist, w)
 			}
 		}
-		secretsArgs = pruneArgs(secretsArgs, secretsPruneWhitelist)
 
-		secretsKubectlCmd := exec.Command(secretsArgs[0], secretsArgs[1:]...)
-		secretsKubectlCmd.Stdin = bytes.NewReader(secrets)
-
-		out, err := secretsKubectlCmd.CombinedOutput()
+		_, out, err := c.apply("-", namespace, dryRunStrategy, secretsPruneWhitelist, secrets)
 		if err != nil {
-			if e, ok := err.(*exec.ExitError); ok {
-				c.Metrics.UpdateKubectlExitCodeCount(namespace, e.ExitCode())
-			}
 			// Don't append the actual output, as the error output
 			// from kubectl can leak the content of secrets
-			kubectlOut = append(kubectlOut, []byte(omitErrOutputMessage)...)
-			return cmdStr, string(kubectlOut), err
+			kubectlOut = kubectlOut + omitErrOutputMessage
+			return cmdStr, kubectlOut, err
 		}
-		c.Metrics.UpdateKubectlExitCodeCount(path, 0)
-		kubectlOut = append(kubectlOut, out...)
+		kubectlOut = kubectlOut + out
 	}
 
-	return cmdStr, string(kubectlOut), nil
+	return cmdStr, kubectlOut, nil
 }
 
-// pruneArgs appends prune arguments to a list of arguments
-func pruneArgs(args []string, pruneWhitelist []string) []string {
+// apply runs `kubectl apply`
+func (c *Client) apply(path, namespace, dryRunStrategy string, pruneWhitelist []string, stdin []byte) (string, string, error) {
+	args := applyArgs(path, namespace, dryRunStrategy, pruneWhitelist)
+
+	kubectlCmd := exec.Command(args[0], args[1:]...)
+	if path == "-" {
+		if len(stdin) == 0 {
+			return "", "", fmt.Errorf("path can't be %s when stdin is empty", path)
+		}
+		kubectlCmd.Stdin = bytes.NewReader(stdin)
+	}
+	out, err := kubectlCmd.CombinedOutput()
+	if err != nil {
+		if e, ok := err.(*exec.ExitError); ok {
+			c.Metrics.UpdateKubectlExitCodeCount(namespace, e.ExitCode())
+		}
+		return kubectlCmd.String(), string(out), err
+	}
+	c.Metrics.UpdateKubectlExitCodeCount(namespace, 0)
+
+	return kubectlCmd.String(), string(out), nil
+}
+
+// applyArgs constructs the arguments for `kubectl apply`
+func applyArgs(path, namespace, dryRunStrategy string, pruneWhitelist []string) []string {
+	args := []string{"kubectl", "apply"}
+
+	if path != "" {
+		args = append(args, []string{"-f", path}...)
+		if path != "-" {
+			args = append(args, "-R")
+		}
+	}
+
+	if namespace != "" {
+		args = append(args, []string{"-n", namespace}...)
+	}
+
+	if dryRunStrategy != "" {
+		args = append(args, fmt.Sprintf("--dry-run=%s", dryRunStrategy))
+	}
+
 	if len(pruneWhitelist) > 0 {
 		args = append(args, []string{"--prune", "--all"}...)
 		for _, w := range pruneWhitelist {
