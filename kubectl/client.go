@@ -17,7 +17,10 @@ import (
 
 var (
 	// To make testing possible
-	execCommand          = exec.Command
+	execCommand = exec.Command
+	// The output is omitted if it contains any of these terms
+	// when there is an error running `kubectl apply -f <path>`
+	omitErrOutputTerms   = []string{"Secret", "base64"}
 	omitErrOutputMessage = "Some error output has been omitted because it may contain sensitive data\n"
 )
 
@@ -167,10 +170,13 @@ func pruneArgs(args []string, pruneWhitelist []string) []string {
 	return args
 }
 
-// filterErrOutput squashes output that may contain potential leaked secrets
+// filterErrOutput squashes output that may contain potentially sensitive
+// information
 func filterErrOutput(out string) string {
-	if strings.Contains(out, "Secret") || strings.Contains(out, "base64") {
-		return omitErrOutputMessage
+	for _, term := range omitErrOutputTerms {
+		if strings.Contains(out, term) {
+			return omitErrOutputMessage
+		}
 	}
 
 	return out

@@ -94,6 +94,15 @@ The request is invalid: patch: Invalid value: "map[data:map[invalid:map[]] metad
 			t.Error(diff)
 		}
 	}
+
+	for _, term := range omitErrOutputTerms {
+		want := omitErrOutputMessage
+		got := filterErrOutput(term)
+
+		if diff := deep.Equal(got, want); diff != nil {
+			t.Error(diff)
+		}
+	}
 }
 
 func TestPruneArgs(t *testing.T) {
