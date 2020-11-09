@@ -259,7 +259,7 @@ func (r *Runner) copyRepository(apps []kubeapplierv1alpha1.Application) (*git.Ut
 	}
 	var paths []string
 	for _, a := range apps {
-		paths = append(paths, fmt.Sprintf("%s/%s", sub, a.Namespace))
+		paths = append(paths, fmt.Sprintf("%s/%s", sub, a.Spec.RepositoryPath))
 	}
 	if err := git.CloneRepository(root, tmpDir, paths...); err != nil {
 		return nil, nil, err
