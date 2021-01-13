@@ -209,6 +209,30 @@ pruning in kube-applier, _all_ your resources need to be listed in your
 `kustomization.yaml` under `resources`. If you don't do this kube-applier will
 assume they have been removed and start pruning.
 
+In terms of permissions, kube-applier needs this role:
+```
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: kube-applier
+rules:
+  - apiGroups: ["kube-applier.io"]
+    resources: ["waybills"]
+    verbs: ["list"]
+  - apiGroups: ["kube-applier.io"]
+    resources: ["waybills/status"]
+    verbs: ["update"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+```
+
+The permissions to apply inside a namespace are granted through delegate
+ServiceAccounts (see the relevant section above).
+
 ## Monitoring
 
 ### Status UI
