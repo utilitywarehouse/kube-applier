@@ -27,5 +27,5 @@ secretGenerator:
     type: Opaque
     files:
       - .strongbox_keyring=secrets/strongbox-keyring
-    options:
-      disableNameSuffixHash: true
+generatorOptions:
+  disableNameSuffixHash: true
