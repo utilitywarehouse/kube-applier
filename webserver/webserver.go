@@ -4,7 +4,6 @@
 package webserver
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -15,9 +14,10 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/rs/cors"
+	"golang.org/x/sync/errgroup"
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
-	"github.com/utilitywarehouse/kube-applier/client"
 	"github.com/utilitywarehouse/kube-applier/log"
 	"github.com/utilitywarehouse/kube-applier/run"
 	"github.com/utilitywarehouse/kube-applier/sysutil"
@@ -28,75 +28,83 @@ const (
 	defaultServerTemplatePath = "templates/status.html"
 )
 
-// WebServer struct
-type WebServer struct {
+type KubeClient interface {
+	ListWaybills(ctx context.Context) ([]kubeapplierv1alpha1.Waybill, error)
+	HasAccess(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, email, verb string) (bool, error)
+}
+
+type Config struct {
 	Authenticator        *oidc.Authenticator
 	Clock                sysutil.ClockInterface
 	DiffURLFormat        string
-	KubeClient           *client.Client
+	KubeClient           KubeClient
 	ListenPort           int
 	RunQueue             chan<- run.Request
 	StatusUpdateInterval time.Duration
 	TemplatePath         string
 	result               *Result
-	server               *http.Server
-	stop, stopped        chan bool
 }
 
-// StatusPageHandler implements the http.Handler interface and serves a status
-// page with info about the most recent applier run.
-type StatusPageHandler struct {
-	Authenticator *oidc.Authenticator
-	Clock         sysutil.ClockInterface
-	Result        *Result
-	Template      *template.Template
+// WebServer struct
+type WebServer struct {
+	port                 int
+	authenticator        *oidc.Authenticator
+	clock                sysutil.ClockInterface
+	statusPageTemplate   *template.Template
+	result               *Result
+	diffURLFormat        string
+	kubeClient           KubeClient
+	statusUpdateInterval time.Duration
+	runQueue             chan<- run.Request
 }
 
-// ServeHTTP populates the status page template with data and serves it when
-// there is a request.
-func (s *StatusPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if s.Authenticator != nil {
-		_, err := s.Authenticator.Authenticate(r.Context(), w, r)
+func New(cfg *Config) (*WebServer, error) {
+	templatePath := cfg.TemplatePath
+	if templatePath == "" {
+		templatePath = defaultServerTemplatePath
+	}
+
+	statusPageTemplate, err := createTemplate(templatePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &WebServer{
+		port:                 cfg.ListenPort,
+		statusUpdateInterval: cfg.StatusUpdateInterval,
+		runQueue:             cfg.RunQueue,
+		authenticator:        cfg.Authenticator,
+		clock:                cfg.Clock,
+		statusPageTemplate:   statusPageTemplate,
+		result:               cfg.result,
+		kubeClient:           cfg.KubeClient,
+		diffURLFormat:        cfg.DiffURLFormat,
+	}, nil
+}
+
+// handleStatus serves a status page with info about the most recent applier run.
+func (ws *WebServer) handleStatus(w http.ResponseWriter, r *http.Request) {
+	if ws.authenticator != nil {
+		_, err := ws.authenticator.Authenticate(r.Context(), w, r)
 		if errors.Is(err, oidc.ErrRedirectRequired) {
 			return
 		}
 		if err != nil {
 			http.Error(w, "Error: Authentication failed", http.StatusInternalServerError)
-			log.Logger("webserver").Error("Authentication failed", "error", err, "time", s.Clock.Now().String())
+			log.Logger("webserver").Error("Authentication failed", "error", err, "time", ws.clock.Now().String())
 			return
 		}
 	}
 
-	log.Logger("webserver").Info("Applier status request", "time", s.Clock.Now().String())
-	if s.Template == nil {
-		http.Error(w, "Error: Unable to load HTML template", http.StatusInternalServerError)
-		log.Logger("webserver").Error("Request failed", "error", "No template found", "time", s.Clock.Now().String())
-		return
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	if err := json.NewEncoder(w).Encode(ws.result); err != nil {
+		// 	log.Logger("webserver").Error("Request failed", "error", http.StatusInternalServerError, "time", ws.clock.Now().String(), "err", err)
+		// panic(err)
 	}
-	rendered := &bytes.Buffer{}
-	if err := s.Template.Execute(rendered, s.Result); err != nil {
-		http.Error(w, "Error: Unable to render HTML template", http.StatusInternalServerError)
-		log.Logger("webserver").Error("Request failed", "error", http.StatusInternalServerError, "time", s.Clock.Now().String(), "err", err)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
-	if _, err := rendered.WriteTo(w); err != nil {
-		log.Logger("webserver").Error("Request failed", "error", http.StatusInternalServerError, "time", s.Clock.Now().String(), "err", err)
-	}
-	log.Logger("webserver").Info("Request completed successfully", "time", s.Clock.Now().String())
 }
 
-// ForceRunHandler implements the http.Handle interface and serves an API
-// endpoint for forcing a new run.
-type ForceRunHandler struct {
-	Authenticator *oidc.Authenticator
-	KubeClient    *client.Client
-	RunQueue      chan<- run.Request
-}
-
-// ServeHTTP handles requests for forcing a run by attempting to add to the
-// runQueue, and writes a response including the result and a relevant message.
-func (f *ForceRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// handleForceRun serves an API endpoint for forcing a new run.
+func (ws *WebServer) handleForceRun(w http.ResponseWriter, r *http.Request) {
 	log.Logger("webserver").Info("Force run requested")
 	var data struct {
 		Result  string `json:"result"`
@@ -104,13 +112,13 @@ func (f *ForceRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch r.Method {
-	case "POST":
+	case http.MethodPost:
 		var (
 			userEmail string
 			err       error
 		)
-		if f.Authenticator != nil {
-			userEmail, err = f.Authenticator.UserEmail(r.Context(), r)
+		if ws.authenticator != nil {
+			userEmail, err = ws.authenticator.UserEmail(r.Context(), r)
 			if err != nil {
 				data.Result = "error"
 				data.Message = "not authenticated"
@@ -137,7 +145,7 @@ func (f *ForceRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		waybills, err := f.KubeClient.ListWaybills(r.Context())
+		waybills, err := ws.kubeClient.ListWaybills(r.Context())
 		if err != nil {
 			data.Result = "error"
 			data.Message = "cannot list Waybills"
@@ -160,9 +168,9 @@ func (f *ForceRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		if f.Authenticator != nil {
+		if ws.authenticator != nil {
 			// if the user can patch the Waybill, they are allowed to force a run
-			hasAccess, err := f.KubeClient.HasAccess(r.Context(), waybill, userEmail, "patch")
+			hasAccess, err := ws.kubeClient.HasAccess(r.Context(), waybill, userEmail, "patch")
 			if !hasAccess {
 				data.Result = "error"
 				data.Message = fmt.Sprintf("user %s is not allowed to force a run on waybill %s/%s", userEmail, waybill.Namespace, waybill.Name)
@@ -174,7 +182,7 @@ func (f *ForceRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		run.Enqueue(f.RunQueue, run.ForcedRun, waybill)
+		run.Enqueue(ws.runQueue, run.ForcedRun, waybill)
 		data.Result = "success"
 		data.Message = "Run queued"
 		w.WriteHeader(http.StatusOK)
@@ -193,93 +201,76 @@ func (f *ForceRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // 2. Metrics
 // 3. Static content
 // 4. Endpoint for forcing a run
-func (ws *WebServer) Start() error {
-	if ws.server != nil {
-		return fmt.Errorf("WebServer already running")
-	}
-
-	ws.stop = make(chan bool)
-	ws.stopped = make(chan bool)
+func (ws *WebServer) Start(ctx context.Context) error {
+	// if server != nil {
+	// 	return fmt.Errorf("WebServer already running")
+	// }
 
 	log.Logger("webserver").Info("Launching")
 
-	templatePath := ws.TemplatePath
-	if templatePath == "" {
-		templatePath = defaultServerTemplatePath
-	}
-	template, err := createTemplate(templatePath)
-	if err != nil {
-		return err
+	m := mux.NewRouter()
+	addStatusEndpoints(m)
+	m.PathPrefix("/api/v1/status").HandlerFunc(ws.handleStatus)
+	m.PathPrefix("/api/v1/forceRun").HandlerFunc(ws.handleForceRun)
+	m.PathPrefix("/").Handler(http.FileServer(http.Dir("../static/build")))
+	// m.PathPrefix("/").HandlerFunc(ws.handleStatusPage)
+
+	server := &http.Server{
+		Addr:     fmt.Sprintf(":%v", ws.port),
+		Handler:  cors.Default().Handler(m),
+		ErrorLog: log.Logger("http.Server").StandardLogger(nil),
 	}
 
 	ws.result = &Result{
 		Mutex:         &sync.Mutex{},
-		DiffURLFormat: ws.DiffURLFormat,
+		DiffURLFormat: ws.diffURLFormat,
 	}
 
-	go func() {
-		ticker := time.NewTicker(ws.StatusUpdateInterval)
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		ticker := time.NewTicker(ws.statusUpdateInterval)
 		defer ticker.Stop()
-		defer close(ws.stopped)
-		ws.updateResult()
+
+		if err := ws.updateResult(ctx); err != nil {
+			return err
+		}
+
 		for {
 			select {
+			case <-ctx.Done():
+				return ctx.Err()
 			case <-ticker.C:
-				ws.updateResult()
-			case <-ws.stop:
-				return
+				if err := ws.updateResult(ctx); err != nil {
+					return err
+				}
 			}
 		}
-	}()
+	})
 
-	m := mux.NewRouter()
-	addStatusEndpoints(m)
-	statusPageHandler := &StatusPageHandler{
-		ws.Authenticator,
-		ws.Clock,
-		ws.result,
-		template,
-	}
-	forceRunHandler := &ForceRunHandler{
-		ws.Authenticator,
-		ws.KubeClient,
-		ws.RunQueue,
-	}
-	m.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	m.PathPrefix("/api/v1/forceRun").Handler(forceRunHandler)
-	m.PathPrefix("/").Handler(statusPageHandler)
+	g.Go(func() error {
+		<-ctx.Done()
+		return server.Shutdown(ctx)
+	})
 
-	ws.server = &http.Server{
-		Addr:     fmt.Sprintf(":%v", ws.ListenPort),
-		Handler:  m,
-		ErrorLog: log.Logger("http.Server").StandardLogger(nil),
-	}
-
-	go func() {
-		if err = ws.server.ListenAndServe(); err != nil {
-			if !errors.Is(err, http.ErrServerClosed) {
-				log.Logger("webserver").Error("Shutdown", "error", err)
-			}
-			log.Logger("webserver").Info("Shutdown")
+	g.Go(func() error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
 		}
-	}()
+	})
 
-	return nil
+	g.Go(func() error {
+		return server.ListenAndServe()
+	})
+
+	return g.Wait()
 }
 
-// Shutdown gracefully shuts the webserver down.
-func (ws *WebServer) Shutdown() error {
-	close(ws.stop)
-	<-ws.stopped
-	err := ws.server.Shutdown(context.Background())
-	ws.server = nil
-	return err
-}
-
-func (ws *WebServer) updateResult() error {
-	ctx, cancel := context.WithTimeout(context.Background(), ws.StatusUpdateInterval-time.Second)
+func (ws *WebServer) updateResult(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, ws.statusUpdateInterval-time.Second)
 	defer cancel()
-	waybills, err := ws.KubeClient.ListWaybills(ctx)
+	waybills, err := ws.kubeClient.ListWaybills(ctx)
 	if err != nil {
 		return fmt.Errorf("Could not list Waybill resources: %v", err)
 	}

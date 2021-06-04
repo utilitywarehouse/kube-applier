@@ -1,2 +1,4 @@
 kube-applier
 testbin/
+node_modules/
+webserver/static/build

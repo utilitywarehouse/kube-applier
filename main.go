@@ -93,6 +93,9 @@ func getDurationEnv(name string, defaultValue time.Duration) time.Duration {
 func main() {
 	flag.Parse()
 
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	defer rootCancel()
+
 	log.SetLevel(*fLogLevel)
 
 	clock := &sysutil.Clock{}
@@ -134,7 +137,7 @@ func main() {
 		log.Logger("kube-applier").Error("could not create git repository", "error", err)
 		os.Exit(1)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), *fRepoTimeout)
+	ctx, cancel := context.WithTimeout(rootCtx, *fRepoTimeout)
 	if err := repo.StartSync(ctx); err != nil {
 		log.Logger("kube-applier").Error("could not sync git repository", "error", err)
 		os.Exit(1)
@@ -184,7 +187,7 @@ func main() {
 	}
 	scheduler.Start()
 
-	webserver := &webserver.WebServer{
+	webserver, err := webserver.New(&webserver.Config{
 		Authenticator:        oidcAuthenticator,
 		Clock:                clock,
 		DiffURLFormat:        *fDiffURLFormat,
@@ -192,18 +195,22 @@ func main() {
 		ListenPort:           *fListenPort,
 		RunQueue:             runQueue,
 		StatusUpdateInterval: *fStatusUpdateInterval,
+	})
+	if err != nil {
+		log.Logger("kube-applier").Error(fmt.Sprintf("Cannot configure webserver: %v", err))
+		os.Exit(1)
 	}
-	if err := webserver.Start(); err != nil {
+
+	if err := webserver.Start(rootCtx); err != nil {
 		log.Logger("kube-applier").Error(fmt.Sprintf("Cannot start webserver: %v", err))
 		os.Exit(1)
 	}
 
 	ctx = signals.SetupSignalHandler()
 	<-ctx.Done()
+	rootCancel()
 	log.Logger("kube-applier").Info("Interrupted, shutting down...")
-	if err := webserver.Shutdown(); err != nil {
-		log.Logger("kube-applier").Error(fmt.Sprintf("Cannot shutdown webserver: %v", err))
-	}
+	<-rootCtx.Done()
 	repo.StopSync()
 	scheduler.Stop()
 	runner.Stop()

@@ -46,7 +46,7 @@ var _ = Describe("WebServer", func() {
 	BeforeEach(func() {
 		testRunQueue = make(chan run.Request)
 		testWebServerRequests = testWebServerDrainRequests(testRunQueue)
-		testWebServer = WebServer{
+		testWebServer = mustNew(New(&Config{
 			ListenPort:           35432,
 			Clock:                &zeroClock{},
 			DiffURLFormat:        "http://foo.bar/diff/%s",
@@ -54,8 +54,8 @@ var _ = Describe("WebServer", func() {
 			RunQueue:             testRunQueue,
 			StatusUpdateInterval: time.Second * 5,
 			TemplatePath:         "../templates/status.html",
-		}
-		Expect(testWebServer.Start()).To(BeNil())
+		}))
+		Expect(testWebServer.Start(context.Background())).To(BeNil())
 	})
 
 	Context("When running", func() {
@@ -93,7 +93,6 @@ var _ = Describe("WebServer", func() {
 				time.Second,
 			).Should(ConsistOf(wbList))
 
-			testWebServer.Shutdown()
 			close(testRunQueue)
 
 			Expect(testWebServerRequests()).To(Equal([]run.Request{}))
@@ -101,14 +100,14 @@ var _ = Describe("WebServer", func() {
 
 		It("Should trigger a ForcedRun when a valid request is made", func() {
 			v := url.Values{}
-			res, err := http.Get(fmt.Sprintf("http://localhost:%d/api/v1/forceRun", testWebServer.ListenPort))
+			res, err := http.Get(fmt.Sprintf("http://localhost:%d/api/v1/forceRun", testWebServer.port))
 			Expect(err).To(BeNil())
 			body, err := io.ReadAll(res.Body)
 			Expect(err).To(BeNil())
 			Expect(res.StatusCode).To(Equal(http.StatusBadRequest))
 			Expect(body).To(MatchJSON(`{"result": "error", "message": "must be a POST request"}`))
 
-			res, err = http.PostForm(fmt.Sprintf("http://localhost:%d/api/v1/forceRun", testWebServer.ListenPort), v)
+			res, err = http.PostForm(fmt.Sprintf("http://localhost:%d/api/v1/forceRun", testWebServer.port), v)
 			Expect(err).To(BeNil())
 			body, err = io.ReadAll(res.Body)
 			Expect(err).To(BeNil())
@@ -116,7 +115,7 @@ var _ = Describe("WebServer", func() {
 			Expect(body).To(MatchJSON(`{"result": "error", "message": "empty namespace value"}`))
 
 			v.Set("namespace", "invalid")
-			res, err = http.PostForm(fmt.Sprintf("http://localhost:%d/api/v1/forceRun", testWebServer.ListenPort), v)
+			res, err = http.PostForm(fmt.Sprintf("http://localhost:%d/api/v1/forceRun", testWebServer.port), v)
 			Expect(err).To(BeNil())
 			body, err = io.ReadAll(res.Body)
 			Expect(err).To(BeNil())
@@ -124,14 +123,13 @@ var _ = Describe("WebServer", func() {
 			Expect(body).To(MatchJSON(`{"result": "error", "message": "cannot find Waybills in namespace 'invalid'"}`))
 
 			v.Set("namespace", wbList[0].Namespace)
-			res, err = http.PostForm(fmt.Sprintf("http://localhost:%d/api/v1/forceRun", testWebServer.ListenPort), v)
+			res, err = http.PostForm(fmt.Sprintf("http://localhost:%d/api/v1/forceRun", testWebServer.port), v)
 			Expect(err).To(BeNil())
 			body, err = io.ReadAll(res.Body)
 			Expect(err).To(BeNil())
 			Expect(res.StatusCode).To(Equal(http.StatusOK))
 			Expect(body).To(MatchJSON(`{"result": "success", "message": "Run queued"}`))
 
-			testWebServer.Shutdown()
 			close(testRunQueue)
 
 			Expect(testWebServerRequests()).To(Equal([]run.Request{{
@@ -144,7 +142,7 @@ var _ = Describe("WebServer", func() {
 			var res *http.Response
 			Eventually(
 				func() error {
-					r, err := http.Get(fmt.Sprintf("http://localhost:%d/", testWebServer.ListenPort))
+					r, err := http.Get(fmt.Sprintf("http://localhost:%d/", testWebServer.port))
 					if err != nil {
 						return err
 					}
@@ -160,7 +158,6 @@ var _ = Describe("WebServer", func() {
 			Expect(res.StatusCode).To(Equal(http.StatusOK))
 			Expect(body).ToNot(BeEmpty())
 
-			testWebServer.Shutdown()
 			close(testRunQueue)
 			Expect(testWebServerRequests()).To(Equal([]run.Request{}))
 		})
@@ -198,4 +195,11 @@ func testEnsureWaybills(wbList []kubeapplierv1alpha1.Waybill) {
 		// Get and Create (which updates the struct) do not.
 		wbList[i].TypeMeta = metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"}
 	}
+}
+
+func mustNew(ws *WebServer, err error) WebServer {
+	if err != nil {
+		panic(err)
+	}
+	return *ws
 }
