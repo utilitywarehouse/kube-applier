@@ -82,8 +82,8 @@ func New(cfg *Config) (*WebServer, error) {
 	}, nil
 }
 
-// handleStatus serves a status page with info about the most recent applier run.
-func (ws *WebServer) handleStatus(w http.ResponseWriter, r *http.Request) {
+// allStatusHandler serves a status page with info about the most recent applier run.
+func (ws *WebServer) allStatusHandler(w http.ResponseWriter, r *http.Request) {
 	if ws.authenticator != nil {
 		_, err := ws.authenticator.Authenticate(r.Context(), w, r)
 		if errors.Is(err, oidc.ErrRedirectRequired) {
@@ -98,8 +98,35 @@ func (ws *WebServer) handleStatus(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	if err := json.NewEncoder(w).Encode(ws.result); err != nil {
-		// 	log.Logger("webserver").Error("Request failed", "error", http.StatusInternalServerError, "time", ws.clock.Now().String(), "err", err)
-		// panic(err)
+		log.Logger("webserver").Error("Request failed", "error", http.StatusInternalServerError, "time", ws.clock.Now().String(), "err", err)
+		panic(err)
+	}
+}
+
+// namespaceStatusHandler serves a status page with info about the most recent applier run.
+func (ws *WebServer) namespaceStatusHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	if ws.authenticator != nil {
+		_, err := ws.authenticator.Authenticate(r.Context(), w, r)
+		if errors.Is(err, oidc.ErrRedirectRequired) {
+			return
+		}
+		if err != nil {
+			http.Error(w, "Error: Authentication failed", http.StatusInternalServerError)
+			log.Logger("webserver").Error("Authentication failed", "error", err, "time", ws.clock.Now().String())
+			return
+		}
+	}
+
+	waybill := ws.result.Namespace(vars["namespace"])
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
+		"Waybill":       waybill,
+		"DiffURLFormat": ws.result.DiffURLFormat,
+	}); err != nil {
+		log.Logger("webserver").Error("Request failed", "error", http.StatusInternalServerError, "time", ws.clock.Now().String(), "err", err)
+		panic(err)
 	}
 }
 
@@ -202,18 +229,14 @@ func (ws *WebServer) handleForceRun(w http.ResponseWriter, r *http.Request) {
 // 3. Static content
 // 4. Endpoint for forcing a run
 func (ws *WebServer) Start(ctx context.Context) error {
-	// if server != nil {
-	// 	return fmt.Errorf("WebServer already running")
-	// }
-
 	log.Logger("webserver").Info("Launching")
 
 	m := mux.NewRouter()
 	addStatusEndpoints(m)
-	m.PathPrefix("/api/v1/status").HandlerFunc(ws.handleStatus)
-	m.PathPrefix("/api/v1/forceRun").HandlerFunc(ws.handleForceRun)
+	m.PathPrefix("/api/v1/status/{namespace}").HandlerFunc(ws.namespaceStatusHandler)
+	m.PathPrefix("/api/v1/status").HandlerFunc(ws.allStatusHandler)
+	m.PathPrefix("/api/v1/forceRun").Methods(http.MethodPost).HandlerFunc(ws.handleForceRun)
 	m.PathPrefix("/").Handler(http.FileServer(http.Dir("../static/build")))
-	// m.PathPrefix("/").HandlerFunc(ws.handleStatusPage)
 
 	server := &http.Server{
 		Addr:     fmt.Sprintf(":%v", ws.port),
@@ -251,13 +274,6 @@ func (ws *WebServer) Start(ctx context.Context) error {
 	g.Go(func() error {
 		<-ctx.Done()
 		return server.Shutdown(ctx)
-	})
-
-	g.Go(func() error {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		}
 	})
 
 	g.Go(func() error {

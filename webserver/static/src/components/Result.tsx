@@ -1,32 +1,34 @@
-import { ObjectMeta, WaybillSpec, WaybillStatus } from '../lib/spec'
 import { Disclosure, Transition } from '@headlessui/react'
 import classNames from 'classnames'
-
+import { DateTime } from 'luxon'
+import { ObjectMeta, WaybillSpec, WaybillStatus } from '../lib/spec'
 interface Props {
-    diffURL: string;
-    spec: WaybillSpec;
-    status: WaybillStatus;
-    metadata: ObjectMeta;
+    diffURL?: string;
+    spec?: WaybillSpec;
+    status?: WaybillStatus;
+    metadata?: ObjectMeta;
+    expanded?: boolean;
 }
 
-const Result: React.FC<Props> = ({ diffURL, spec, status, metadata }) => {
-    const containerCx = classNames('flex flex-col rounded border', {
-        'border-green-600': status?.lastRun?.success,
+const Result: React.FC<Props> = ({ diffURL, spec, status, metadata, expanded }) => {
+    const containerCx = classNames('flex flex-col rounded-sm border', {
+        'border-green-500': status?.lastRun?.success,
         'border-red-600': !status?.lastRun?.success,
     })
-    const headlineCx = classNames('flex items-center space-x-1 cursor-pointer text-white font-bold flex-1 p-2', {
-        'bg-green-600': status?.lastRun?.success,
+    const headlineCx = classNames('flex items-center space-x-1 cursor-pointer text-white font-bold flex-1 p-3', {
+        'bg-green-500': status?.lastRun?.success,
         'bg-red-600': !status?.lastRun?.success,
     })
     return (
-        <Disclosure>
+        <Disclosure defaultOpen={expanded}>
             {({ open }) => (
                 <div className={containerCx}>
                     <Disclosure.Button as="div" className={headlineCx}>
                         <div className="flex-1">{metadata?.namespace}</div>
-                        {spec?.dryRun && <div className="uppercase border p-1 bg-red-500 border-red-800 rounded text-xs">Dry run</div>}
-                        {spec?.prune && <div className="uppercase border p-1 rounded text-xs">Prune</div>}
-                        {spec?.autoApply && <div className="uppercase border p-1 rounded text-xs">Auto apply</div>}
+                        {spec?.dryRun && <div className="uppercase border px-2 py-1 bg-red-600 border-red-600 rounded-sm text-xs">Dry run</div>}
+                        {spec?.prune && <div className="uppercase border px-2 py-1 rounded-sm text-xs">Prune</div>}
+                        {spec?.autoApply && <div className="uppercase border px-2 py-1 rounded-sm text-xs">Auto apply</div>}
+                        {spec?.runInterval && <div className="border px-2 py-1 rounded-sm text-xs">INTERVAL {spec.runInterval}s</div>}
                     </Disclosure.Button>
                     <Transition
                         show={open}
@@ -36,21 +38,34 @@ const Result: React.FC<Props> = ({ diffURL, spec, status, metadata }) => {
                         leave="transition duration-75 ease-in"
                         leaveFrom="opacity-100"
                         leaveTo="opacity-0">
-                    <Disclosure.Panel static >
-                        <div className="p-4">
-                            <div className="space-y-1">
-                                <p><strong>Type</strong>: {status?.lastRun?.type}</p>
-                                <p><strong>Started</strong>: {status?.lastRun?.started}</p>
-                                <p><strong>Finished</strong>: {status?.lastRun?.finished}</p>
-                            </div>
-                            <div className="">
-                                <p className="font-bold uppercase">Command</p>
-                                <p>{status?.lastRun?.command}</p>
-                            </div>
-                            <p className="mt-4">Last Commit <a className="hover:underline text-blue-600 font-bold" href={diffURL}>(see diff)</a></p>
-                            <pre className="bg-gray-100 p-4 overflow-hidden text-xs border border-gray-300 rounded">
-                                {status?.lastRun?.output}
-                            </pre>
+                    <Disclosure.Panel static>
+                        <div className="p-2">
+                            {status?.lastRun && (
+                                <>
+                                    <div className="space-y-1">
+                                        <div className="flex space-x-2 items-center">
+                                            <p className="bg-gray-100 px-4 py-1 text-xs rounded-sm">{status?.lastRun?.type}</p>
+                                            <p className="bg-gray-100 px-4 py-1 text-xs rounded-sm">Commit <a className="hover:underline text-blue-600 font-bold" href={diffURL}>({status?.lastRun?.commit})</a></p>
+                                            <p className="bg-gray-100 px-4 py-1 text-xs rounded-sm">{DateTime.fromISO(status?.lastRun?.started).toRelative()} (took 10s)</p>
+                                            <p className="flex-1" />
+                                            <button className="bg-orange-400 border-orange-500 px-3 py-1 rounded-sm border hover:bg-orange-500 hover:border-orange-600 text-white font-bold text-sm">Force run</button>
+                                        </div>
+                                    </div>
+                                    {!status?.lastRun?.success && (
+                                        <div className="space-y-1 my-2">
+                                            <p className="font-bold uppercase text-xs">Error</p>
+                                            <pre className="bg-red-500 py-3 px-2 text-white overflow-hidden text-xs rounded-sm">{status?.lastRun?.errorMessage}</pre>
+                                        </div>
+                                    )}
+                                    <details open={expanded} className="bg-gray-100 p-2 mt-2 overflow-auto text-xs border border-gray-200 rounded-sm">
+                                        <summary>Output</summary>
+                                        <p className="truncate py-2"><strong>$</strong> {status?.lastRun?.command}</p>
+                                        <pre className="py-2">
+                                            {status?.lastRun?.output}
+                                        </pre>
+                                    </details>
+                                </>
+                            )}
                         </div>
                     </Disclosure.Panel>
                     </Transition>

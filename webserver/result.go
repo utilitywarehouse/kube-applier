@@ -46,6 +46,17 @@ func (r *Result) Failures() []kubeapplierv1alpha1.Waybill {
 	return ret
 }
 
+func (r *Result) Namespace(namespace string) *kubeapplierv1alpha1.Waybill {
+	r.Lock()
+	defer r.Unlock()
+	for _, wb := range r.Waybills {
+		if strings.EqualFold(wb.ObjectMeta.Namespace, namespace) {
+			return &wb
+		}
+	}
+	return nil
+}
+
 // FormattedTime returns the Time in the format "YYYY-MM-DD hh:mm:ss -0000 GMT"
 func (r *Result) FormattedTime(t metav1.Time) string {
 	return t.Time.Truncate(time.Second).String()
