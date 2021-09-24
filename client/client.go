@@ -6,7 +6,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	authorizationv1 "k8s.io/api/authorization/v1"
@@ -38,6 +40,10 @@ var (
 	scheme = runtime.NewScheme()
 
 	defaultUpdateOptions = &client.UpdateOptions{FieldManager: "kube-applier"}
+
+	clientQPS float32 = 5
+
+	clientBurst int = 10
 )
 
 func init() {
@@ -48,6 +54,21 @@ func init() {
 	if err := kubeapplierv1alpha1.AddToScheme(scheme); err != nil {
 		log.Fatalf("Cannot setup client scheme: %v", err)
 	}
+
+	if envQPS := os.Getenv("CLIENT_QPS"); envQPS != "" {
+		if qps, err := strconv.ParseFloat(envQPS, 32); err != nil {
+			clientQPS = float32(qps)
+		}
+	}
+
+	if envBurst := os.Getenv("CLIENT_BURST"); envBurst != "" {
+		if burst, err := strconv.Atoi(envBurst); err != nil {
+			clientBurst = burst
+		}
+	} else {
+		clientBurst = 2 * int(clientQPS)
+	}
+
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -64,6 +85,8 @@ func New(opts ...cluster.Option) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Cannot get kubernetes config: %v", err)
 	}
+	cfg.QPS = clientQPS
+	cfg.Burst = clientBurst
 	return newClient(cfg, opts...)
 }
 
