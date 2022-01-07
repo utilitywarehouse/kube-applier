@@ -387,7 +387,7 @@ $ make release VERSION=3.3.3-rc.3
 
 Copyright 2016 Box, Inc. All rights reserved.
 
-Copyright (c) 2017-2021 Utility Warehouse Ltd.
+Copyright (c) 2017-2022 Utility Warehouse Ltd.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
