@@ -34,7 +34,7 @@ ifeq (, $(shell which controller-gen))
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.1 ;\
+	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0 ;\
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	}
 CONTROLLER_GEN=$(GOBIN)/controller-gen
@@ -43,7 +43,7 @@ CONTROLLER_GEN=$(shell which controller-gen)
 endif
 
 KUBEBUILDER_BINDIR=$${PWD}/kubebuilder-bindir
-KUBEBUILDER_VERSION="1.21.x"
+KUBEBUILDER_VERSION="1.23.x"
 test:
 	command -v setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 	mkdir -p $(KUBEBUILDER_BINDIR)

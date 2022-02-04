@@ -107,7 +107,6 @@ var _ = Describe("Client", func() {
 			Expect(cluster).To(Equal([]string{
 				"core/v1/Namespace",
 				"storage.k8s.io/v1/StorageClass",
-				"storage.k8s.io/v1beta1/StorageClass",
 			}))
 			Expect(namespaced).To(Equal([]string{
 				"core/v1/Pod",
