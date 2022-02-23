@@ -2,6 +2,8 @@ package run
 
 import (
 	"context"
+	"fmt"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -162,104 +164,103 @@ var _ = Describe("Scheduler", func() {
 			testSchedulerRequestsWait()
 		})
 
-		//It("Should trigger runs for Waybills that have had their source change in git", func() {
-		//	headHash, err := testScheduler.Repository.HashForPath(context.TODO(), testScheduler.RepoPath)
-		//	Expect(err).To(BeNil())
-		//	Expect(headHash).ToNot(BeEmpty())
-		//	appAHeadHash, err := testScheduler.Repository.HashForPath(context.TODO(), filepath.Join(testScheduler.RepoPath, "app-a"))
-		//	Expect(err).To(BeNil())
-		//	Expect(appAHeadHash).ToNot(BeEmpty())
-		//	appAKHeadHash, err := testScheduler.Repository.HashForPath(context.TODO(), filepath.Join(testScheduler.RepoPath, "app-a-kustomize"))
-		//	Expect(err).To(BeNil())
-		//	Expect(appAKHeadHash).ToNot(BeEmpty())
+		It("Should trigger runs for Waybills that have had their source change in git", func() {
+			headHash, err := testScheduler.Repository.HashForPath(context.TODO(), testScheduler.RepoPath)
+			Expect(err).To(BeNil())
+			Expect(headHash).ToNot(BeEmpty())
+			appAHeadHash, err := testScheduler.Repository.HashForPath(context.TODO(), filepath.Join(testScheduler.RepoPath, "app-a"))
+			Expect(err).To(BeNil())
+			Expect(appAHeadHash).ToNot(BeEmpty())
+			appAKHeadHash, err := testScheduler.Repository.HashForPath(context.TODO(), filepath.Join(testScheduler.RepoPath, "app-a-kustomize"))
+			Expect(err).To(BeNil())
+			Expect(appAKHeadHash).ToNot(BeEmpty())
 
-		//	wbList := []*kubeapplierv1alpha1.Waybill{
-		//		{
-		//			TypeMeta:   metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-		//			ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "ignored"},
-		//			Status: kubeapplierv1alpha1.WaybillStatus{
-		//				LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-		//					Finished: metav1.NewTime(time.Now()),
-		//					Started:  metav1.NewTime(time.Now()),
-		//				},
-		//			},
-		//		},
-		//		{
-		//			TypeMeta:   metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-		//			ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "up-to-date"},
-		//			Status: kubeapplierv1alpha1.WaybillStatus{
-		//				LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-		//					Finished: metav1.NewTime(time.Now()),
-		//					Started:  metav1.NewTime(time.Now()),
-		//					Commit:   headHash,
-		//				},
-		//			},
-		//		},
-		//		{
-		//			TypeMeta:   metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-		//			ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "scheduler-polling-app-a"},
-		//			Spec: kubeapplierv1alpha1.WaybillSpec{
-		//				RepositoryPath: "app-a",
-		//			},
-		//			Status: kubeapplierv1alpha1.WaybillStatus{
-		//				LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-		//					Finished: metav1.NewTime(time.Now()),
-		//					Started:  metav1.NewTime(time.Now()),
-		//					Commit:   appAHeadHash, // this is the app-a dir head hash, no changes since
-		//				},
-		//			},
-		//		},
-		//		{
-		//			TypeMeta:   metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-		//			ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "scheduler-polling-app-a-kustomize"},
-		//			Spec: kubeapplierv1alpha1.WaybillSpec{
-		//				RepositoryPath: "app-a-kustomize",
-		//			},
-		//			Status: kubeapplierv1alpha1.WaybillStatus{
-		//				LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-		//					Finished: metav1.NewTime(time.Now()),
-		//					Started:  metav1.NewTime(time.Now()),
-		//					Commit:   fmt.Sprintf("%s^1", appAKHeadHash), // this is a hack that should always return changes
-		//				},
-		//			},
-		//		},
-		//		{ // this should not produce any requests, with autoApply false
-		//			TypeMeta:   metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-		//			ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "scheduler-polling-app-a-kustomize-no-auto-apply"},
-		//			Spec: kubeapplierv1alpha1.WaybillSpec{
-		//				RepositoryPath: "app-a-kustomize",
-		//				AutoApply:      pointer.BoolPtr(false),
-		//			},
-		//			Status: kubeapplierv1alpha1.WaybillStatus{
-		//				LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-		//					Finished: metav1.NewTime(time.Now()),
-		//					Started:  metav1.NewTime(time.Now()),
-		//					Commit:   fmt.Sprintf("%s^1", appAKHeadHash), // this is a hack that should always return changes
-		//				},
-		//			},
-		//		},
-		//	}
-		//	testEnsureWaybills(wbList)
-		//	testWaitForSchedulerToUpdate(&testScheduler, wbList)
+			wbList := []*kubeapplierv1alpha1.Waybill{
+				{
+					TypeMeta:   metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
+					ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "ignored"},
+					Status: kubeapplierv1alpha1.WaybillStatus{
+						LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+							Finished: metav1.NewTime(time.Now()),
+							Started:  metav1.NewTime(time.Now()),
+						},
+					},
+				},
+				{
+					TypeMeta:   metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
+					ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "up-to-date"},
+					Status: kubeapplierv1alpha1.WaybillStatus{
+						LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+							Finished: metav1.NewTime(time.Now()),
+							Started:  metav1.NewTime(time.Now()),
+							Commit:   headHash,
+						},
+					},
+				},
+				{
+					TypeMeta:   metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
+					ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "scheduler-polling-app-a"},
+					Spec: kubeapplierv1alpha1.WaybillSpec{
+						RepositoryPath: "app-a",
+					},
+					Status: kubeapplierv1alpha1.WaybillStatus{
+						LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+							Finished: metav1.NewTime(time.Now()),
+							Started:  metav1.NewTime(time.Now()),
+							Commit:   appAHeadHash, // this is the app-a dir head hash, no changes since
+						},
+					},
+				},
+				{
+					TypeMeta:   metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
+					ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "scheduler-polling-app-a-kustomize"},
+					Spec: kubeapplierv1alpha1.WaybillSpec{
+						RepositoryPath: "app-a-kustomize",
+					},
+					Status: kubeapplierv1alpha1.WaybillStatus{
+						LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+							Finished: metav1.NewTime(time.Now()),
+							Started:  metav1.NewTime(time.Now()),
+							Commit:   fmt.Sprintf("%s^1", appAKHeadHash), // this is a hack that should always return changes
+						},
+					},
+				},
+				{ // this should not produce any requests, with autoApply false
+					TypeMeta:   metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
+					ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "scheduler-polling-app-a-kustomize-no-auto-apply"},
+					Spec: kubeapplierv1alpha1.WaybillSpec{
+						RepositoryPath: "app-a-kustomize",
+						AutoApply:      pointer.BoolPtr(false),
+					},
+					Status: kubeapplierv1alpha1.WaybillStatus{
+						LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+							Finished: metav1.NewTime(time.Now()),
+							Started:  metav1.NewTime(time.Now()),
+							Commit:   fmt.Sprintf("%s^1", appAKHeadHash), // this is a hack that should always return changes
+						},
+					},
+				},
+			}
+			testEnsureWaybills(wbList)
+			testWaitForSchedulerToUpdate(&testScheduler, wbList)
+			// This is a hack to force the scheduler to re-check all
+			// Waybills for this test. Otherwise, the test is sensitive to
+			// timing and can fail if the git polling check runs before the
+			// Scheduler has synced all Waybills from the apiserver.
+			testScheduler.waybillsMutex.Lock()
+			testScheduler.gitLastQueuedHash = ""
+			testScheduler.waybillsMutex.Unlock()
 
-		//	// This is a hack to force the scheduler to re-check all
-		//	// Waybills for this test. Otherwise, the test is sensitive to
-		//	// timing and can fail if the git polling check runs before the
-		//	// Scheduler has synced all Waybills from the apiserver.
-		//	testScheduler.waybillsMutex.Lock()
-		//	testScheduler.gitLastQueuedHash = ""
-		//	testScheduler.waybillsMutex.Unlock()
+			testWaitForRequests(testSchedulerRequests, MatchAllKeys(Keys{
+				"scheduler-polling-app-a-kustomize": MatchAllKeys(Keys{
+					PollingRun: Equal(1),
+				}),
+			}))
 
-		//	testWaitForRequests(testSchedulerRequests, MatchAllKeys(Keys{
-		//		"scheduler-polling-app-a-kustomize": MatchAllKeys(Keys{
-		//			PollingRun: Equal(1),
-		//		}),
-		//	}))
-
-		//	testScheduler.Stop()
-		//	close(testRunQueue)
-		//	testSchedulerRequestsWait()
-		//})
+			testScheduler.Stop()
+			close(testRunQueue)
+			testSchedulerRequestsWait()
+		})
 
 		It("Should export metrics about resources applied", func() {
 			By("Listing all the Waybills in the cluster")
@@ -298,7 +299,6 @@ Some error output has been omitted because it may contain sensitive data
 			testMetrics([]string{
 				`kube_applier_git_last_sync_timestamp 0`,
 				`kube_applier_run_queue{namespace="metrics-bar",type="Scheduled run"} 1`,
-				`kube_applier_run_queue{namespace="metrics-foo",type="Scheduled run"} 1`,
 				`kube_applier_waybill_spec_auto_apply{namespace="metrics-bar"} 1`,
 				`kube_applier_waybill_spec_auto_apply{namespace="metrics-foo"} 1`,
 				`kube_applier_waybill_spec_dry_run{namespace="metrics-bar"} 0`,
@@ -306,10 +306,10 @@ Some error output has been omitted because it may contain sensitive data
 				`kube_applier_waybill_spec_run_interval{namespace="metrics-bar"} 3600`,
 				`kube_applier_waybill_spec_run_interval{namespace="metrics-foo"} 3600`,
 
-				//`kube_applier_result_summary{action="created",name="metrics-foo",namespace="metrics-foo",type="namespace"} 1`,
-				//`kube_applier_result_summary{action="created",name="test-a",namespace="metrics-foo",type="deployment.apps"} 1`,
-				//`kube_applier_result_summary{action="unchanged",name="test-b",namespace="metrics-foo",type="deployment.apps"} 1`,
-				//`kube_applier_result_summary{action="configured",name="test-c",namespace="metrics-foo",type="deployment.apps"} 1`,
+				`kube_applier_result_summary{action="created",name="metrics-foo",namespace="metrics-foo",type="namespace"} 1`,
+				`kube_applier_result_summary{action="created",name="test-a",namespace="metrics-foo",type="deployment.apps"} 1`,
+				`kube_applier_result_summary{action="unchanged",name="test-b",namespace="metrics-foo",type="deployment.apps"} 1`,
+				`kube_applier_result_summary{action="configured",name="test-c",namespace="metrics-foo",type="deployment.apps"} 1`,
 			})
 		})
 
@@ -368,6 +368,10 @@ func testEnsureWaybills(wbList []*kubeapplierv1alpha1.Waybill) {
 		// Create() which makes it difficult to handle it below.
 		rv := wbList[i].ResourceVersion
 		wbList[i].ResourceVersion = ""
+
+		//Create is clearing Status before creating the resource, it looks like only Update works which is what the runner is using as well to set the Status after a run
+		wbStatus := wbList[i].Status.DeepCopy()
+
 		err = k8sClient.GetClient().Create(context.TODO(), wbList[i])
 		if err != nil && errors.IsAlreadyExists(err) {
 			wbList[i].ResourceVersion = rv
@@ -375,6 +379,9 @@ func testEnsureWaybills(wbList []*kubeapplierv1alpha1.Waybill) {
 		} else {
 			Expect(err).To(BeNil())
 		}
+
+		//Repopulating the Status so that updating is triggered
+		wbList[i].Status = *wbStatus
 		if wbList[i].Status.LastRun != nil {
 			// UpdateStatus changes SelfLink to the status sub-resource but we
 			// should revert the change for tests to pass
