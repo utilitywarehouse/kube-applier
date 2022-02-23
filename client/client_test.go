@@ -176,7 +176,7 @@ var _ = Describe("Client", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "alpha", Namespace: "ns-0"},
 			}
 			eventMessages := []string{"test1", "test2"}
-			if err := testKubeClient.GetClient().Create(context.TODO(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}); err != nil {
+			if err := testKubeClient.GetClient().Create(context.TODO(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-0"}}); err != nil {
 				Expect(errors.IsAlreadyExists(err)).To(BeTrue())
 			}
 			if err := testKubeClient.GetClient().Create(context.TODO(), &wb); err != nil {
@@ -184,6 +184,8 @@ var _ = Describe("Client", func() {
 			}
 			for _, msg := range eventMessages {
 				testKubeClient.EmitWaybillEvent(&wb, corev1.EventTypeWarning, "TestWaybillEvent", msg)
+				//metav1.Time has second level precision when marshalling/unmarshalling
+				time.Sleep(1 * time.Second)
 			}
 			eventList := &corev1.EventList{}
 			Eventually(
