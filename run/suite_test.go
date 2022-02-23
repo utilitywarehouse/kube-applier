@@ -14,6 +14,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	gomegaformat "github.com/onsi/gomega/format"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -49,6 +50,8 @@ var (
 func init() {
 	repoPath, _ := filepath.Abs("..")
 	repo, _ = git.NewRepository(repoPath, git.RepositoryConfig{Remote: "foo"}, git.SyncOptions{})
+	//Disable truncating of tests output
+	gomegaformat.MaxLength = 0
 }
 
 func TestAPIs(t *testing.T) {
