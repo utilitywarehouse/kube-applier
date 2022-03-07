@@ -152,7 +152,7 @@ func (c *Client) applyPath(ctx context.Context, path string, options ApplyOption
 // applyFromBuilders runs kustomize and cue on the path, merges the resulting manifests and pipes them to `kubectl apply -f -`
 func (c *Client) applyFromBuilders(ctx context.Context, path string, options ApplyOptions, kustomize, cue bool) (string, string, error) {
 	var kustomizeBytes, cueBytes []byte
-	cmdStr := ""
+	var cmdStr, kustomizeCmdStr, cueCmdStr string
 
 	if kustomize {
 		var kustomizeStdout, kustomizeStderr bytes.Buffer
@@ -170,7 +170,7 @@ func (c *Client) applyFromBuilders(ctx context.Context, path string, options App
 			return kustomizeCmd.String(), kustomizeStderr.String(), err
 		}
 		kustomizeBytes = kustomizeStdout.Bytes()
-		cmdStr = kustomizeCmd.String()
+		kustomizeCmdStr = kustomizeCmd.String()
 	}
 
 	if cue {
@@ -190,12 +190,15 @@ func (c *Client) applyFromBuilders(ctx context.Context, path string, options App
 			return cueCmd.String(), cueStderr.String(), err
 		}
 		cueBytes = cueStdout.Bytes()
+		cueCmdStr = cueCmd.String() + " @ " + path
+	}
 
-		if kustomize {
-			cmdStr = "(`" + cmdStr + "` + `" + cueCmd.String() + "` @ " + path + ")"
-		} else {
-			cmdStr = cueCmd.String() + " @ " + path
-		}
+	if kustomize && cue {
+		cmdStr = "(`" + kustomizeCmdStr + "` + `" + cueCmdStr + "`)"
+	} else if kustomize {
+		cmdStr = kustomizeCmdStr
+	} else {
+		cmdStr = cueCmdStr
 	}
 
 	// Combine cue and kustomize
