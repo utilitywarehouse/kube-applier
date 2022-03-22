@@ -6,6 +6,7 @@ RUN apk --no-cache add git gcc make musl-dev curl bash openssh-client
 
 ENV \
   CUE_VERSION=v0.4.2 \
+  HOF_VERSION=0.6.1 \
   STRONGBOX_VERSION=1.0.0 \
   KUBECTL_VERSION=v1.21.0 \
   KUSTOMIZE_VERSION=v4.4.1
@@ -14,6 +15,8 @@ RUN os=$(go env GOOS) && arch=$(go env GOARCH) \
   && curl -Ls https://github.com/cue-lang/cue/releases/download/${CUE_VERSION}/cue_${CUE_VERSION}_${os}_${arch}.tar.gz \
     | tar xz -C /usr/local/bin/ \
   && chmod +x /usr/local/bin/cue \
+  && curl -Ls -o /usr/local/bin/hof https://github.com/hofstadter-io/hof/releases/download/v${HOF_VERSION}/hof_${HOF_VERSION}_$(uname)_$(uname -m) \
+  && chmod +x /usr/local/bin/hof \
   && curl -Ls -o /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/${os}/${arch}/kubectl \
   && chmod +x /usr/local/bin/kubectl \
   && curl -Ls https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_${os}_${arch}.tar.gz \
@@ -37,6 +40,7 @@ COPY templates/ /templates/
 COPY static/ /static/
 COPY --from=build \
   /usr/local/bin/cue \
+  /usr/local/bin/hof \
   /usr/local/bin/kubectl \
   /usr/local/bin/kustomize \
   /usr/local/bin/strongbox \

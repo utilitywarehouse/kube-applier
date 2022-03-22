@@ -183,6 +183,23 @@ func (c *Client) applyFromBuilders(ctx context.Context, path string, options App
 	}
 
 	if cue {
+		if _, err := os.Stat(path + "/cue.mods"); err == nil {
+			var hofStdout, hofStderr bytes.Buffer
+			hofCmd := exec.CommandContext(ctx, "hof", "mod", "vendor", "cue")
+			hofCmd.Dir = path
+			options.setCommandEnvironment(hofCmd)
+			hofCmd.Stdout = &hofStdout
+			hofCmd.Stderr = &hofStderr
+
+			err := hofCmd.Run()
+			if err != nil {
+				if ctx.Err() == context.DeadlineExceeded {
+					err = errors.Wrap(ctx.Err(), err.Error())
+				}
+				return hofCmd.String(), hofStderr.String(), err
+			}
+		}
+
 		var cueStdout, cueStderr bytes.Buffer
 
 		cueCmd := exec.CommandContext(ctx, "cue", "build", ".")
