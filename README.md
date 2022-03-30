@@ -228,6 +228,15 @@ reliably if you aren't using the RBAC
 [authorization module](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#authorization-modules).
 In which case, the prune whitelist may be empty or incomplete.
 
+## CUE integration
+In addition to plain yaml and [Kustomize](https://kustomize.io/), kube-applier can also apply [CUE](https://cuelang.org/) configurations.
+
+If a namespace contains .cue files, kube-applier will run `cue build .` and apply the output of the command, that should produce valid kubernetes manifests.
+
+It is up to the namespace to define how the cue files are organized and to provide a custom `build` command that converts them to yaml. Some documentation about how to it can be found in the [tool](https://pkg.go.dev/cuelang.org/go/pkg/tool) pkg documentation and in [cuetorials](https://cuetorials.com/first-steps/scripting/)
+
+Until cue implements a native dependency manager, kube-applier uses [hof](https://github.com/hofstadter-io/hof) to define and pull external modules. Documentation on how it works can be found in [cuetorials](https://cuetorials.com/first-steps/modules-and-packages/)
+
 ## Deploying
 
 Included is a Kustomize (https://kustomize.io/) base you can reference in your
