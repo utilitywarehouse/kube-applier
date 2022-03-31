@@ -389,7 +389,7 @@ Please use the make target "release" with "VERSION" argument to update all
 references and clean up after, example:
 
 ```
-$ make release VERSION=3.3.3-rc.3
+$ make release VERSION=v3.3.3-rc.3
 ```
 
 ## Copyright and License
