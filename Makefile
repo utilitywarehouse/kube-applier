@@ -8,12 +8,12 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-.PHONY: manifests generate controller-gen test build run release
+.PHONY: manifests generate controller-gen-install test build run release
 
 # Generate manifests e.g. CRD, RBAC etc.
-manifests: controller-gen
-	$(CONTROLLER_GEN) \
-		crd:trivialVersions=true \
+manifests: controller-gen-install
+	controller-gen \
+		crd:crdVersions=v1 \
 		paths="./..." \
 		output:crd:artifacts:config=manifests/base/cluster
 	@{ \
@@ -22,25 +22,13 @@ manifests: controller-gen
 	}
 
 # Generate code
-generate: controller-gen
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+generate: controller-gen-install
+	controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-# find or download controller-gen
-# download controller-gen if necessary
-controller-gen:
-ifeq (, $(shell which controller-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
-else
-CONTROLLER_GEN=$(shell which controller-gen)
-endif
+# Make sure controller-gen is installed. This should build and install packages
+# in module-aware mode, ignoring any local go.mod file
+controller-gen-install:
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0
 
 KUBEBUILDER_BINDIR=$${PWD}/kubebuilder-bindir
 KUBEBUILDER_VERSION="1.23.x"
