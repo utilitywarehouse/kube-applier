@@ -13,7 +13,7 @@ endif
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
 	$(CONTROLLER_GEN) \
-		crd:trivialVersions=true \
+		crd \
 		paths="./..." \
 		output:crd:artifacts:config=manifests/base/cluster
 	@{ \
@@ -25,22 +25,10 @@ manifests: controller-gen
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-# find or download controller-gen
-# download controller-gen if necessary
+# Make sure controller-gen package is installed in a module-aware mode, ignoring
+# the local go.mod.
 controller-gen:
-ifeq (, $(shell which controller-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
-else
-CONTROLLER_GEN=$(shell which controller-gen)
-endif
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0
 
 KUBEBUILDER_BINDIR=$${PWD}/kubebuilder-bindir
 KUBEBUILDER_VERSION="1.23.x"
