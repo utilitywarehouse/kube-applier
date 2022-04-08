@@ -25,7 +25,7 @@ type Result struct {
 func (r *Result) Successes() []kubeapplierv1alpha1.Waybill {
 	var ret []kubeapplierv1alpha1.Waybill
 	for _, wb := range r.Waybills {
-		if wb.Status.LastRun != nil && wb.Status.LastRun.Success {
+		if wb.Status.LastRun != nil && wb.Status.LastRun.Success && wb.Status.LastRun.RunRequestSuccess {
 			ret = append(ret, wb)
 		}
 	}
@@ -36,7 +36,18 @@ func (r *Result) Successes() []kubeapplierv1alpha1.Waybill {
 func (r *Result) Failures() []kubeapplierv1alpha1.Waybill {
 	var ret []kubeapplierv1alpha1.Waybill
 	for _, wb := range r.Waybills {
-		if wb.Status.LastRun != nil && !wb.Status.LastRun.Success {
+		if wb.Status.LastRun != nil && !wb.Status.LastRun.Success && wb.Status.LastRun.RunRequestSuccess {
+			ret = append(ret, wb)
+		}
+	}
+	return ret
+}
+
+// Warnings returns all the Waybills where the request failed before applying
+func (r *Result) Warnings() []kubeapplierv1alpha1.Waybill {
+	var ret []kubeapplierv1alpha1.Waybill
+	for _, wb := range r.Waybills {
+		if wb.Status.LastRun != nil && !wb.Status.LastRun.RunRequestSuccess {
 			ret = append(ret, wb)
 		}
 	}

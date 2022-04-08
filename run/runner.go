@@ -215,6 +215,7 @@ func (r *Runner) processRequest(request Request) error {
 
 	request.Waybill.Status.LastRun.Commit = hash
 	request.Waybill.Status.LastRun.Type = request.Type.String()
+	request.Waybill.Status.LastRun.RunRequestSuccess = true
 
 	if err := r.updateWaybillStatus(ctx, request.Waybill); err != nil {
 		log.Logger("runner").Warn("Could not update Waybill status", "waybill", wbId, "error", err)
@@ -252,6 +253,29 @@ func (r *Runner) captureRequestFailure(req Request, err error) {
 	wbId := fmt.Sprintf("%s/%s", req.Waybill.Namespace, req.Waybill.Name)
 	log.Logger("runner").Error("Run request failed", "waybill", wbId, "error", err)
 	r.KubeClient.EmitWaybillEvent(req.Waybill, corev1.EventTypeWarning, "WaybillRunRequestFailed", err.Error())
+	r.updateWaybillRequestFailure(req)
+}
+
+// updateWaybillRequestFailure will update the waybill status to mark tha
+// request did not go through
+func (r *Runner) updateWaybillRequestFailure(req Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(req.Waybill.Spec.RunTimeout)*time.Second)
+	defer cancel()
+	wbId := fmt.Sprintf("%s/%s", req.Waybill.Namespace, req.Waybill.Name)
+	wb, err := r.KubeClient.GetWaybill(ctx, req.Waybill.Namespace, req.Waybill.Name)
+	if err != nil {
+		log.Logger("runner").Error("Cannot get waybill to capture request error", "waybill", wbId, "error", err)
+	}
+	if wb.Status.LastRun != nil {
+		wb.Status.LastRun.RunRequestSuccess = false
+	} else {
+		wb.Status.LastRun = &kubeapplierv1alpha1.WaybillStatusRun{
+			RunRequestSuccess: false,
+		}
+	}
+	if err := r.KubeClient.UpdateWaybillStatus(ctx, wb); err != nil {
+		log.Logger("runner").Error("Failed to update waybil with request failure", "waybill", wbId, "error", err)
+	}
 }
 
 // Stop gracefully shuts down the Runner.

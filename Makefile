@@ -8,11 +8,11 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-.PHONY: manifests generate controller-gen test build run release
+.PHONY: manifests generate controller-gen-install test build run release
 
 # Generate manifests e.g. CRD, RBAC etc.
-manifests: controller-gen
-	$(CONTROLLER_GEN) \
+manifests: controller-gen-install
+	controller-gen \
 		crd \
 		paths="./..." \
 		output:crd:artifacts:config=manifests/base/cluster
@@ -22,12 +22,12 @@ manifests: controller-gen
 	}
 
 # Generate code
-generate: controller-gen
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+generate: controller-gen-install
+	controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Make sure controller-gen package is installed in a module-aware mode, ignoring
 # the local go.mod.
-controller-gen:
+controller-gen-install:
 	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0
 
 KUBEBUILDER_BINDIR=$${PWD}/kubebuilder-bindir

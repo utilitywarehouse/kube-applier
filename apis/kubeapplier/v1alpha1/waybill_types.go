@@ -109,6 +109,13 @@ type WaybillStatusRun struct {
 	// Output is the stdout of the Command.
 	Output string `json:"output"`
 
+	// RunRequestSuccess denotes whether a request reached apply phase or
+	// errors occurred before attempting to apply. This is used to display
+	// warnings when a request was not able to try applying manifests for
+	// some reason. Default to true, so new waybills do not raise warnings.
+	// +kubebuilder:default=true
+	RunRequestSuccess bool `json:"runRequestSuccess"`
+
 	// Started is the time that the apply run started applying this Waybill.
 	Started metav1.Time `json:"started"`
 

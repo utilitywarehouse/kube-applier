@@ -73,7 +73,8 @@ var totalFilesTestCases = []totalFilesTestCase{
 				ObjectMeta: metav1.ObjectMeta{Name: "app-a"},
 				Status: kubeapplierv1alpha1.WaybillStatus{
 					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-						Success: true,
+						Success:           true,
+						RunRequestSuccess: true,
 					},
 				},
 			},
@@ -81,7 +82,8 @@ var totalFilesTestCases = []totalFilesTestCase{
 				ObjectMeta: metav1.ObjectMeta{Name: "app-b"},
 				Status: kubeapplierv1alpha1.WaybillStatus{
 					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-						Success: false,
+						Success:           false,
+						RunRequestSuccess: true,
 					},
 				},
 			},
@@ -95,7 +97,8 @@ var totalFilesTestCases = []totalFilesTestCase{
 				ObjectMeta: metav1.ObjectMeta{Name: "app-b"},
 				Status: kubeapplierv1alpha1.WaybillStatus{
 					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-						Success: false,
+						Success:           false,
+						RunRequestSuccess: true,
 					},
 				},
 			},
@@ -105,7 +108,8 @@ var totalFilesTestCases = []totalFilesTestCase{
 				ObjectMeta: metav1.ObjectMeta{Name: "app-a"},
 				Status: kubeapplierv1alpha1.WaybillStatus{
 					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-						Success: true,
+						Success:           true,
+						RunRequestSuccess: true,
 					},
 				},
 			},

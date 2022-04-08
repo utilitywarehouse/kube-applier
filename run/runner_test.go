@@ -206,9 +206,10 @@ var _ = Describe("Runner", func() {
 					Output: `namespace/app-a configured
 deployment.apps/test-deployment created
 `,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
+					RunRequestSuccess: true,
+					Started:           metav1.Time{},
+					Success:           true,
+					Type:              PollingRun.String(),
 				},
 				{
 					Command:      "",
@@ -217,9 +218,10 @@ deployment.apps/test-deployment created
 					Output: `namespace/app-b configured
 error: error validating "testdata/manifests/app-b/deployment.yaml": error validating data: ValidationError(Deployment.spec.template.spec): missing required field "containers" in io.k8s.api.core.v1.PodSpec; if you choose to ignore these errors, turn validation off with --validate=false
 `,
-					Started: metav1.Time{},
-					Success: false,
-					Type:    PollingRun.String(),
+					RunRequestSuccess: true,
+					Started:           metav1.Time{},
+					Success:           false,
+					Type:              PollingRun.String(),
 				},
 				{
 					Command:      "",
@@ -228,9 +230,10 @@ error: error validating "testdata/manifests/app-b/deployment.yaml": error valida
 					Output: `namespace/app-c configured (server dry run)
 deployment.apps/test-deployment created (server dry run)
 `,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
+					RunRequestSuccess: true,
+					Started:           metav1.Time{},
+					Success:           true,
+					Type:              PollingRun.String(),
 				},
 			}
 
@@ -311,9 +314,10 @@ deployment.apps/test-deployment created (server dry run)
 deployment.apps/test-deployment created
 Some error output has been omitted because it may contain sensitive data
 `,
-					Started: metav1.Time{},
-					Success: false,
-					Type:    PollingRun.String(),
+					RunRequestSuccess: true,
+					Started:           metav1.Time{},
+					Success:           false,
+					Type:              PollingRun.String(),
 				},
 			}
 
@@ -492,14 +496,15 @@ QUFER0ZzYTJGeVFHdDFhbWx5WVFFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`)
 			expectedStatus := []*kubeapplierv1alpha1.WaybillStatusRun{
 				// 1. app-b-kustomize-nokey
 				{
-					Command:      fmt.Sprintf("^%s build /.*$", kustomizePath),
-					Commit:       bHeadCommitHash,
-					ErrorMessage: "exit status 1",
-					Finished:     metav1.Time{},
-					Output:       `(?s)Error: accumulating resources:.*'ssh:\/\/deploy_github_com\/utilitywarehouse\/kube-applier\/\/testdata\/bases\/simple-deployment\?ref=master'.*exit status 128`,
-					Started:      metav1.Time{},
-					Success:      false,
-					Type:         PollingRun.String(),
+					Command:           fmt.Sprintf("^%s build /.*$", kustomizePath),
+					Commit:            bHeadCommitHash,
+					ErrorMessage:      "exit status 1",
+					Finished:          metav1.Time{},
+					Output:            `(?s)Error: accumulating resources:.*'ssh:\/\/deploy_github_com\/utilitywarehouse\/kube-applier\/\/testdata\/bases\/simple-deployment\?ref=master'.*exit status 128`,
+					RunRequestSuccess: true,
+					Started:           metav1.Time{},
+					Success:           false,
+					Type:              PollingRun.String(),
 				},
 				// 2. app-b-kustomize-notfound
 				nil,
@@ -509,14 +514,15 @@ QUFER0ZzYTJGeVFHdDFhbWx5WVFFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`)
 				// matches, but is there to help us identify which
 				// test failed
 				{
-					Command:      fmt.Sprintf("^%s build /.*$", kustomizePath),
-					Commit:       bHeadCommitHash,
-					ErrorMessage: "exit status 1",
-					Finished:     metav1.Time{},
-					Output:       `(?s)Error: accumulating resources:.*'ssh:\/\/deploy_github_com\/utilitywarehouse\/kube-applier\/\/testdata\/bases\/simple-deployment\?ref=master'.*exit status 128(na)?`,
-					Started:      metav1.Time{},
-					Success:      false,
-					Type:         PollingRun.String(),
+					Command:           fmt.Sprintf("^%s build /.*$", kustomizePath),
+					Commit:            bHeadCommitHash,
+					ErrorMessage:      "exit status 1",
+					Finished:          metav1.Time{},
+					Output:            `(?s)Error: accumulating resources:.*'ssh:\/\/deploy_github_com\/utilitywarehouse\/kube-applier\/\/testdata\/bases\/simple-deployment\?ref=master'.*exit status 128(na)?`,
+					RunRequestSuccess: true,
+					Started:           metav1.Time{},
+					Success:           false,
+					Type:              PollingRun.String(),
 				},
 				// 4. app-b-kustomize
 				{
@@ -527,9 +533,10 @@ QUFER0ZzYTJGeVFHdDFhbWx5WVFFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`)
 					Output: `namespace/app-b-kustomize configured
 deployment.apps/test-deployment created
 `,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
+					RunRequestSuccess: true,
+					Started:           metav1.Time{},
+					Success:           true,
+					Type:              PollingRun.String(),
 				},
 				// 5. app-b-kustomize-twokeys
 				{
@@ -540,9 +547,10 @@ deployment.apps/test-deployment created
 					Output: `namespace/app-b-kustomize unchanged
 deployment.apps/test-deployment created
 `,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
+					RunRequestSuccess: true,
+					Started:           metav1.Time{},
+					Success:           true,
+					Type:              PollingRun.String(),
 				},
 				// 6. app-c-kustomize-withkey
 				{
@@ -553,9 +561,10 @@ deployment.apps/test-deployment created
 					Output: `namespace/app-c-kustomize created
 deployment.apps/test-deployment created
 `,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
+					RunRequestSuccess: true,
+					Started:           metav1.Time{},
+					Success:           true,
+					Type:              PollingRun.String(),
 				},
 			}
 
@@ -733,9 +742,10 @@ deployment.apps/test-deployment created
 					Output: `namespace/app-d configured
 error: error validating "testdata/manifests/app-d/deployment.yaml": error validating data: invalid object to validate; if you choose to ignore these errors, turn validation off with --validate=false
 `,
-					Started: metav1.Time{},
-					Success: false,
-					Type:    PollingRun.String(),
+					RunRequestSuccess: true,
+					Started:           metav1.Time{},
+					Success:           false,
+					Type:              PollingRun.String(),
 				},
 				nil,
 				nil,
@@ -747,9 +757,10 @@ error: error validating "testdata/manifests/app-d/deployment.yaml": error valida
 					Output: `namespace/app-d unchanged
 deployment.apps/test-deployment created
 `,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
+					RunRequestSuccess: true,
+					Started:           metav1.Time{},
+					Success:           true,
+					Type:              PollingRun.String(),
 				},
 				nil,
 				{
@@ -760,9 +771,10 @@ deployment.apps/test-deployment created
 					Output: `namespace/app-d unchanged
 deployment.apps/test-deployment created
 `,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
+					RunRequestSuccess: true,
+					Started:           metav1.Time{},
+					Success:           true,
+					Type:              PollingRun.String(),
 				},
 				{
 					Command:      "",
@@ -772,9 +784,10 @@ deployment.apps/test-deployment created
 					Output: `namespace/app-d unchanged
 deployment.apps/test-deployment created
 `,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
+					RunRequestSuccess: true,
+					Started:           metav1.Time{},
+					Success:           true,
+					Type:              PollingRun.String(),
 				},
 			}
 
@@ -903,9 +916,10 @@ deployment.apps/test-deployment created
 					Output: `namespace/app-e configured
 deployment.apps/test-deployment created
 `,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
+					RunRequestSuccess: true,
+					Started:           metav1.Time{},
+					Success:           true,
+					Type:              PollingRun.String(),
 				},
 			}
 
@@ -1079,10 +1093,11 @@ func matchWaybill(expected kubeapplierv1alpha1.Waybill, kubectlPath, kustomizePa
 					"Time": BeTemporally(">=", expected.Status.LastRun.Started.Time),
 				}),
 			),
-			"Output":  outputMatcher,
-			"Started": Equal(expected.Status.LastRun.Started),
-			"Success": Equal(expected.Status.LastRun.Success),
-			"Type":    Equal(expected.Status.LastRun.Type),
+			"Output":            outputMatcher,
+			"RunRequestSuccess": Equal(expected.Status.LastRun.RunRequestSuccess),
+			"Started":           Equal(expected.Status.LastRun.Started),
+			"Success":           Equal(expected.Status.LastRun.Success),
+			"Type":              Equal(expected.Status.LastRun.Type),
 		}))
 	}
 	return MatchAllFields(Fields{
