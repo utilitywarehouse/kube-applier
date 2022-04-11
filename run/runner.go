@@ -252,6 +252,35 @@ func (r *Runner) captureRequestFailure(req Request, err error) {
 	wbId := fmt.Sprintf("%s/%s", req.Waybill.Namespace, req.Waybill.Name)
 	log.Logger("runner").Error("Run request failed", "waybill", wbId, "error", err)
 	r.KubeClient.EmitWaybillEvent(req.Waybill, corev1.EventTypeWarning, "WaybillRunRequestFailed", err.Error())
+	r.updateWaybillStatusRequestFailure(req, err.Error())
+}
+
+// updateWaybillStatusRequestFailure will update the waybill status with a
+// failure. All values produced by `kubectl apply` will be empty and Success
+// should be false to mark a failure. The UI shall rely on emitted events to
+// provide more information regarding the error led to this failure.
+func (r *Runner) updateWaybillStatusRequestFailure(req Request, errorMessage string) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(req.Waybill.Spec.RunTimeout)*time.Second)
+	defer cancel()
+	wbId := fmt.Sprintf("%s/%s", req.Waybill.Namespace, req.Waybill.Name)
+	wb, err := r.KubeClient.GetWaybill(ctx, req.Waybill.Namespace, req.Waybill.Name)
+	if err != nil {
+		log.Logger("runner").Error("Cannot get waybill to capture request error", "waybill", wbId, "error", err)
+	}
+	t := r.Clock.Now()
+	wb.Status.LastRun = &kubeapplierv1alpha1.WaybillStatusRun{
+		Command:      "",
+		Commit:       "",
+		Output:       "",
+		ErrorMessage: errorMessage,
+		Finished:     metav1.NewTime(t),
+		Started:      metav1.NewTime(t),
+		Success:      false,
+		Type:         req.Type.String(),
+	}
+	if err := r.KubeClient.UpdateWaybillStatus(ctx, wb); err != nil {
+		log.Logger("runner").Error("Failed to update waybill with request failure", "waybill", wbId, "error", err)
+	}
 }
 
 // Stop gracefully shuts down the Runner.
