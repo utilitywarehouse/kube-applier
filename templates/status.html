@@ -30,7 +30,6 @@
             {{template "section" (filter . "warning")}}
         {{ end }}
 
-
         {{ if (filter . "success").Namespaces }}
             {{template "section" (filter . "success")}}
         {{ end }}
@@ -49,7 +48,7 @@
     <div class="col-md-2"></div>
     <div class="col-md-8">
         <div class="panel-group">
-            <div class='panel panel-default {{if eq $.Outcome "success"}}panel-success{{else if eq $.Outcome "failure"}}panel-danger{{end}}'>
+            <div class='panel panel-default {{if eq $.Outcome "success"}}panel-success{{else if eq $.Outcome "failure"}}panel-danger{{else if eq $.Outcome "warning"}}panel-warning{{end}}'>
                 <div class="panel-heading">
                     <h4 class="panel-title">
                         <a data-toggle="collapse" href="#{{$.Outcome}}">
@@ -57,6 +56,8 @@
                                 Pending Namespaces: {{ len .Namespaces }} / {{ .Total }}
                             {{else if eq $.Outcome "failure"}}
                                 Failed Namespaces: {{ len .Namespaces }} / {{ .Total }}
+                            {{else if eq $.Outcome "warning"}}
+                                Applied Namespaces (with warning): {{ len .Namespaces }} / {{ .Total }}
                             {{else if eq $.Outcome "success"}}
                                 Applied Namespaces: {{ len .Namespaces }} / {{ .Total }}
                             {{end}}

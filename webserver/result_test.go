@@ -78,6 +78,17 @@ var waybills = []kubeapplierv1alpha1.Waybill{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "app-c", Name: "main"},
 		Status:     kubeapplierv1alpha1.WaybillStatus{},
 	},
+	{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "app-e", Name: "main"},
+		Status: kubeapplierv1alpha1.WaybillStatus{
+			LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+				Success: true,
+				Output: `namespace/zoo unchanged
+Warning: batch/v1beta1 CronJob is deprecated in v1.21+, unavailable in v1.25+; use batch/v1 CronJob
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
+		},
+	},
 }
 
 var events = []corev1.Event{
@@ -129,6 +140,20 @@ func Test_GetNamespaces(t *testing.T) {
 			},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s",
 		},
+		{
+			Waybill: v1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "app-e", Name: "main"},
+				Status: kubeapplierv1alpha1.WaybillStatus{
+					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+						Success: true,
+						Output: `namespace/zoo unchanged
+Warning: batch/v1beta1 CronJob is deprecated in v1.21+, unavailable in v1.25+; use batch/v1 CronJob
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
+				},
+			},
+			DiffURLFormat: "https://github.com/org/repo/commit/%s",
+		},
 	}
 
 	got := GetNamespaces(waybills, events, diffURL)
@@ -148,12 +173,12 @@ func Test_filter(t *testing.T) {
 		args args
 		want Filtered
 	}{
-		{"unknown", args{"unknown"}, Filtered{Outcome: "unknown", Total: 3}},
-		{"pending", args{"pending"}, Filtered{Outcome: "pending", Total: 3, Namespaces: []Namespace{{
+		{"unknown", args{"unknown"}, Filtered{Outcome: "unknown", Total: 4}},
+		{"pending", args{"pending"}, Filtered{Outcome: "pending", Total: 4, Namespaces: []Namespace{{
 			Waybill:       v1alpha1.Waybill{ObjectMeta: metav1.ObjectMeta{Namespace: "app-c", Name: "main"}},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s"}}},
 		},
-		{"failure", args{"failure"}, Filtered{Outcome: "failure", Total: 3, Namespaces: []Namespace{{
+		{"failure", args{"failure"}, Filtered{Outcome: "failure", Total: 4, Namespaces: []Namespace{{
 			Waybill: v1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "app-b", Name: "main"},
 				Status: kubeapplierv1alpha1.WaybillStatus{
@@ -163,9 +188,23 @@ func Test_filter(t *testing.T) {
 				}},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s"}}},
 		},
-		{"success", args{"success"}, Filtered{Outcome: "success", Total: 3, Namespaces: []Namespace{{
+		{"warning", args{"warning"}, Filtered{Outcome: "warning", Total: 4, Namespaces: []Namespace{{
 			Waybill: v1alpha1.Waybill{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "app-c", Name: "main"},
+				ObjectMeta: metav1.ObjectMeta{Namespace: "app-e", Name: "main"},
+				Status: kubeapplierv1alpha1.WaybillStatus{
+					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+						Success: true,
+						Output: `namespace/zoo unchanged
+Warning: batch/v1beta1 CronJob is deprecated in v1.21+, unavailable in v1.25+; use batch/v1 CronJob
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
+				},
+			},
+			DiffURLFormat: "https://github.com/org/repo/commit/%s"}}},
+		},
+		{"success", args{"success"}, Filtered{Outcome: "success", Total: 4, Namespaces: []Namespace{{
+			Waybill: v1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "app-a", Name: "main"},
 				Status: kubeapplierv1alpha1.WaybillStatus{
 					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
 						Success: true,
@@ -331,5 +370,36 @@ func TestResultAppliedRecently(t *testing.T) {
 				},
 			}),
 		)
+	}
+}
+
+func Test_isOutcomeHasWarnings(t *testing.T) {
+	type args struct {
+		output string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{"empty", args{output: ""}, false},
+		{"null", args{}, false},
+		{"valid", args{`namespace/zoo unchanged
+Warning: batch/v1beta1 CronJob is deprecated in v1.21+, unavailable in v1.25+; use batch/v1 CronJob
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`}, true},
+		{"no-warning", args{`namespace/zoo unchanged
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`}, false},
+		{"error", args{`networkpolicy.networking.k8s.io/default unchanged
+unable to recognize "STDIN": no matches for kind "Ingress" in version "extensions/v1beta1"
+unable to recognize "STDIN": no matches for kind "Ingress" in version "extensions/v1beta1"`}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isOutcomeHasWarnings(tt.args.output); got != tt.want {
+				t.Errorf("isOutcomeHasWarnings() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

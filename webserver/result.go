@@ -2,6 +2,7 @@ package webserver
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -11,6 +12,8 @@ import (
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 )
+
+var warningCheckReg = regexp.MustCompile("^Warning:.*")
 
 // namespace stores the current state of the waybill and events of a namespace.
 type Namespace struct {
@@ -67,13 +70,28 @@ func filter(Namespaces []Namespace, outcome string) Filtered {
 			if ns.Waybill.Status.LastRun != nil && !ns.Waybill.Status.LastRun.Success {
 				filtered.Namespaces = append(filtered.Namespaces, ns)
 			}
+		case "warning":
+			if ns.Waybill.Status.LastRun != nil && ns.Waybill.Status.LastRun.Success &&
+				isOutcomeHasWarnings(ns.Waybill.Status.LastRun.Output) {
+				filtered.Namespaces = append(filtered.Namespaces, ns)
+			}
 		case "success":
-			if ns.Waybill.Status.LastRun != nil && ns.Waybill.Status.LastRun.Success {
+			if ns.Waybill.Status.LastRun != nil && ns.Waybill.Status.LastRun.Success &&
+				!isOutcomeHasWarnings(ns.Waybill.Status.LastRun.Output) {
 				filtered.Namespaces = append(filtered.Namespaces, ns)
 			}
 		}
 	}
 	return filtered
+}
+
+func isOutcomeHasWarnings(output string) bool {
+	for _, l := range strings.Split(output, "\n") {
+		if warningCheckReg.MatchString(strings.TrimSpace(l)) {
+			return true
+		}
+	}
+	return false
 }
 
 // Helper functions used in templates

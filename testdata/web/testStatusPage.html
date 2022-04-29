@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html>
 <head>
@@ -210,7 +209,86 @@ unable to recognize &#34;STDIN&#34;: no matches for kind &#34;Ingress&#34; in ve
         
 
         
+            
+<div class="row">
+    <div class="col-md-2"></div>
+    <div class="col-md-8">
+        <div class="panel-group">
+            <div class='panel panel-default panel-warning'>
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#warning">
+                            
+                                Applied Namespaces (with warning): 1 / 7
+                            
+                        </a>
+                    </h4>
+                </div>
+                <div id="warning" class="panel-group collapse in">
+                    
+                        
+<div class="panel">
+  <div class="panel-heading">
+      <div class="panel-title">
+          <a data-toggle="collapse" href="#fuz">fuz </a>
+      </div>
+  </div>
+  
+  <div id="fuz" class="panel-collapse collapse">
+      <ul class="list-group">
+          <li class="list-group-item">
+              <div class="row">
+                  <div class="col-md-10">
+                      <strong>Type: </strong>Scheduled run<br/>
+                      
+                      
+                      <strong>Commit: </strong><a href="https://github.com/org/repo/commit/22c815614b">22c815614b</a><br/>
+                      
+                      
+                      <strong>Started: </strong>2022-04-26 13:35:05 &#43;0000 UTC (took 60 sec)<br/>
+                      
+                      
+                  </div>
+                  <div class="col-md-2"><button data-namespace="fuz" class="force-button force-namespace-button btn btn-warning btn-s"><strong>Force apply run</strong></button></div>
+              </div>
+          </li>
+          
+          <li class="list-group-item">
+              <pre class="file-output">$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/fuz | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
+namespace/fuz unchanged
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged
+configmap/postgres-init unchanged
+configmap/postgres-env unchanged
+service/postgres unchanged
+service/webapp unchanged
+limitrange/default configured
+persistentvolumeclaim/postgres unchanged
+deployment.apps/postgres unchanged
+deployment.apps/webapp configured
+waybill.kube-applier.io/main unchanged
+networkpolicy.networking.k8s.io/default unchanged
+Warning: autoscaling/v2beta1 HorizontalPodAutoscaler is deprecated in v1.22&#43;, unavailable in v1.25&#43;; use autoscaling/v2beta2 HorizontalPodAutoscaler
+Warning: batch/v1beta1 CronJob is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use batch/v1 CronJob
+Warning: policy/v1beta1 PodDisruptionBudget is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use policy/v1 PodDisruptionBudget
+Warning: discovery.k8s.io/v1beta1 EndpointSlice is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use discovery.k8s.io/v1 EndpointSlice
+</pre>
+          </li>
+          
+          
+      </ul>
+  </div>
+  
+</div>
 
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        
 
         
             
@@ -223,7 +301,7 @@ unable to recognize &#34;STDIN&#34;: no matches for kind &#34;Ingress&#34; in ve
                     <h4 class="panel-title">
                         <a data-toggle="collapse" href="#success">
                             
-                                Applied Namespaces: 3 / 7
+                                Applied Namespaces: 2 / 7
                             
                         </a>
                     </h4>
@@ -316,62 +394,6 @@ serviceaccount/kube-applier-delegate unchanged
 rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged
 waybill.kube-applier.io/main unchanged
 networkpolicy.networking.k8s.io/default unchanged
-</pre>
-          </li>
-          
-          
-      </ul>
-  </div>
-  
-</div>
-
-                    
-                        
-<div class="panel">
-  <div class="panel-heading">
-      <div class="panel-title">
-          <a data-toggle="collapse" href="#fuz">fuz </a>
-      </div>
-  </div>
-  
-  <div id="fuz" class="panel-collapse collapse">
-      <ul class="list-group">
-          <li class="list-group-item">
-              <div class="row">
-                  <div class="col-md-10">
-                      <strong>Type: </strong>Scheduled run<br/>
-                      
-                      
-                      <strong>Commit: </strong><a href="https://github.com/org/repo/commit/22c815614b">22c815614b</a><br/>
-                      
-                      
-                      <strong>Started: </strong>2022-04-26 13:35:05 &#43;0000 UTC (took 60 sec)<br/>
-                      
-                      
-                  </div>
-                  <div class="col-md-2"><button data-namespace="fuz" class="force-button force-namespace-button btn btn-warning btn-s"><strong>Force apply run</strong></button></div>
-              </div>
-          </li>
-          
-          <li class="list-group-item">
-              <pre class="file-output">$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/fuz | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
-namespace/fuz unchanged
-serviceaccount/kube-applier-delegate unchanged
-rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged
-configmap/postgres-init unchanged
-configmap/postgres-env unchanged
-service/postgres unchanged
-service/webapp unchanged
-limitrange/default configured
-persistentvolumeclaim/postgres unchanged
-deployment.apps/postgres unchanged
-deployment.apps/webapp configured
-waybill.kube-applier.io/main unchanged
-networkpolicy.networking.k8s.io/default unchanged
-Warning: autoscaling/v2beta1 HorizontalPodAutoscaler is deprecated in v1.22&#43;, unavailable in v1.25&#43;; use autoscaling/v2beta2 HorizontalPodAutoscaler
-Warning: batch/v1beta1 CronJob is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use batch/v1 CronJob
-Warning: policy/v1beta1 PodDisruptionBudget is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use policy/v1 PodDisruptionBudget
-Warning: discovery.k8s.io/v1beta1 EndpointSlice is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use discovery.k8s.io/v1 EndpointSlice
 </pre>
           </li>
           
