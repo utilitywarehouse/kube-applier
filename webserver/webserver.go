@@ -86,13 +86,10 @@ func (s *StatusPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Logger("webserver").Error("Unable to list Waybill events", "error", err, "time", s.Clock.Now().String())
 		return
 	}
-	result := &Result{
-		DiffURLFormat: s.DiffURLFormat,
-		Events:        events,
-		Waybills:      waybills,
-	}
+	result := GetNamespaces(waybills, events, s.DiffURLFormat)
+
 	rendered := &bytes.Buffer{}
-	if err := s.Template.Execute(rendered, result); err != nil {
+	if err := s.Template.ExecuteTemplate(rendered, "index", result); err != nil {
 		http.Error(w, "Error: Unable to render HTML template", http.StatusInternalServerError)
 		log.Logger("webserver").Error("Request failed", "error", http.StatusInternalServerError, "time", s.Clock.Now().String(), "err", err)
 		return
