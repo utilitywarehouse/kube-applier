@@ -1,0 +1,395 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>kube-applier</title>
+    <script src="/static/bootstrap/js/jquery.min.js"></script>
+    <script src="/static/js/main.js"></script>
+    <link rel="stylesheet" href="/static/stylesheets/main.css">
+    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.min.css">
+    <script src="/static/bootstrap/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <h1 class="text-center">kube-applier</h1>
+    
+        <div class="row">
+            <div class="col-md-4"></div>
+            <div id="force-alert-container" class="col-md-4"></div>
+        </div>
+    
+        
+            
+<div class="row">
+    <div class="col-md-2"></div>
+    <div class="col-md-8">
+        <div class="panel-group">
+            <div class='panel panel-default '>
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#pending">
+                            
+                                Pending Namespaces: 2 / 7
+                            
+                        </a>
+                    </h4>
+                </div>
+                <div id="pending" class="panel-group collapse in">
+                    
+                        
+<div class="panel">
+  <div class="panel-heading">
+      <div class="panel-title">
+          <a data-toggle="collapse" href="#foo">foo </a>
+      </div>
+  </div>
+  
+</div>
+
+                    
+                        
+<div class="panel">
+  <div class="panel-heading">
+      <div class="panel-title">
+          <a data-toggle="collapse" href="#bar">bar </a>
+      </div>
+  </div>
+  
+</div>
+
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        
+        
+        
+            
+<div class="row">
+    <div class="col-md-2"></div>
+    <div class="col-md-8">
+        <div class="panel-group">
+            <div class='panel panel-default panel-danger'>
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#failure">
+                            
+                                Failed Namespaces: 2 / 7
+                            
+                        </a>
+                    </h4>
+                </div>
+                <div id="failure" class="panel-group collapse in">
+                    
+                        
+<div class="panel">
+  <div class="panel-heading">
+      <div class="panel-title">
+          <a data-toggle="collapse" href="#zot">zot </a>
+      </div>
+  </div>
+  
+  <div id="zot" class="panel-collapse collapse">
+      <ul class="list-group">
+          <li class="list-group-item">
+              <div class="row">
+                  <div class="col-md-10">
+                      <strong>Type: </strong>Git polling run<br/>
+                      
+                      
+                      <strong>Commit: </strong><a href="https://github.com/org/repo/commit/22c815614b">22c815614b</a><br/>
+                      
+                      
+                      <strong>Started: </strong>2022-04-26 13:35:05 &#43;0000 UTC (took 60 sec)<br/>
+                      
+                      
+                      <strong>Error Message: </strong>exit status 1
+                      
+                  </div>
+                  <div class="col-md-2"><button data-namespace="zot" class="force-button force-namespace-button btn btn-warning btn-s"><strong>Force apply run</strong></button></div>
+              </div>
+          </li>
+          
+          
+          <li class="list-group-item">
+            <table class="table">
+              <thead>
+                  <tr>
+                  <th scope="col">LAST SEEN</th>
+                  <th scope="col">TYPE</th>
+                  <th scope="col">REASON</th>
+                  <th scope="col">MESSAGE</th>
+                 </tr>
+              </thead>
+              <tbody>
+              
+                
+                    <tr>
+                    <td>2022-04-26 13:40:05 &#43;0000 UTC</th>
+                    <td>Warning</td>
+                    <td>WaybillRunRequestFailed</td>
+                    <td>failed fetching delegate token: secrets &#34;kube-applier-delegate-token&#34; not found</td>
+                </tr>
+                
+              
+              </tbody>
+           </table>
+        </li>
+        
+      </ul>
+  </div>
+  
+</div>
+
+                    
+                        
+<div class="panel">
+  <div class="panel-heading">
+      <div class="panel-title">
+          <a data-toggle="collapse" href="#zoo">zoo </a>
+      </div>
+  </div>
+  
+  <div id="zoo" class="panel-collapse collapse">
+      <ul class="list-group">
+          <li class="list-group-item">
+              <div class="row">
+                  <div class="col-md-10">
+                      <strong>Type: </strong>Scheduled run<br/>
+                      
+                      
+                      <strong>Commit: </strong><a href="https://github.com/org/repo/commit/22c815614b">22c815614b</a><br/>
+                      
+                      
+                      <strong>Started: </strong>2022-04-26 13:35:05 &#43;0000 UTC (took 60 sec)<br/>
+                      
+                      
+                      <strong>Error Message: </strong>exit status 1
+                      
+                  </div>
+                  <div class="col-md-2"><button data-namespace="zoo" class="force-button force-namespace-button btn btn-warning btn-s"><strong>Force apply run</strong></button></div>
+              </div>
+          </li>
+          
+          <li class="list-group-item">
+              <pre class="file-output">$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/zoo | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
+namespace/zoo unchanged
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged
+configmap/postgres-init unchanged
+configmap/postgres-env unchanged
+service/postgres unchanged
+service/webapp unchanged
+limitrange/default configured
+persistentvolumeclaim/postgres unchanged
+deployment.apps/postgres unchanged
+deployment.apps/webapp configured
+waybill.kube-applier.io/main unchanged
+networkpolicy.networking.k8s.io/default unchanged
+unable to recognize &#34;STDIN&#34;: no matches for kind &#34;Ingress&#34; in version &#34;extensions/v1beta1&#34;
+unable to recognize &#34;STDIN&#34;: no matches for kind &#34;Ingress&#34; in version &#34;extensions/v1beta1&#34;
+</pre>
+          </li>
+          
+          
+      </ul>
+  </div>
+  
+</div>
+
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        
+
+        
+
+
+        
+            
+<div class="row">
+    <div class="col-md-2"></div>
+    <div class="col-md-8">
+        <div class="panel-group">
+            <div class='panel panel-default panel-success'>
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#success">
+                            
+                                Applied Namespaces: 3 / 7
+                            
+                        </a>
+                    </h4>
+                </div>
+                <div id="success" class="panel-group collapse in">
+                    
+                        
+<div class="panel">
+  <div class="panel-heading">
+      <div class="panel-title">
+          <a data-toggle="collapse" href="#buz">buz </a>
+      </div>
+  </div>
+  
+  <div id="buz" class="panel-collapse collapse">
+      <ul class="list-group">
+          <li class="list-group-item">
+              <div class="row">
+                  <div class="col-md-10">
+                      <strong>Type: </strong>Scheduled run<br/>
+                      
+                      
+                      <strong>Commit: </strong><a href="https://github.com/org/repo/commit/22c815614b">22c815614b</a><br/>
+                      
+                      
+                      <strong>Started: </strong>2022-04-26 13:35:05 &#43;0000 UTC (took 60 sec)<br/>
+                      
+                      
+                  </div>
+                  <div class="col-md-2"><button data-namespace="buz" class="force-button force-namespace-button btn btn-warning btn-s"><strong>Force apply run</strong></button></div>
+              </div>
+          </li>
+          
+          <li class="list-group-item">
+              <pre class="file-output">$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/buz | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
+namespace/buz unchanged
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged
+configmap/postgres-init unchanged
+configmap/postgres-env unchanged
+service/postgres unchanged
+service/webapp unchanged
+limitrange/default configured
+persistentvolumeclaim/postgres unchanged
+deployment.apps/postgres unchanged
+deployment.apps/webapp configured
+waybill.kube-applier.io/main unchanged
+networkpolicy.networking.k8s.io/default unchanged
+</pre>
+          </li>
+          
+          
+      </ul>
+  </div>
+  
+</div>
+
+                    
+                        
+<div class="panel">
+  <div class="panel-heading">
+      <div class="panel-title">
+          <a data-toggle="collapse" href="#eng">eng </a>
+      </div>
+  </div>
+  
+  <div id="eng" class="panel-collapse collapse">
+      <ul class="list-group">
+          <li class="list-group-item">
+              <div class="row">
+                  <div class="col-md-10">
+                      <strong>Type: </strong>Scheduled run<br/>
+                      
+                      
+                      <strong>Commit: </strong><a href="https://github.com/org/repo/commit/22c815614b">22c815614b</a><br/>
+                      
+                      
+                      <strong>Started: </strong>2022-04-26 13:35:05 &#43;0000 UTC (took 60 sec)<br/>
+                      
+                      
+                  </div>
+                  <div class="col-md-2"><button data-namespace="eng" class="force-button force-namespace-button btn btn-warning btn-s"><strong>Force apply run</strong></button></div>
+              </div>
+          </li>
+          
+          <li class="list-group-item">
+              <pre class="file-output">$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/eng | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
+namespace/eng unchanged
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged
+waybill.kube-applier.io/main unchanged
+networkpolicy.networking.k8s.io/default unchanged
+</pre>
+          </li>
+          
+          
+      </ul>
+  </div>
+  
+</div>
+
+                    
+                        
+<div class="panel">
+  <div class="panel-heading">
+      <div class="panel-title">
+          <a data-toggle="collapse" href="#fuz">fuz </a>
+      </div>
+  </div>
+  
+  <div id="fuz" class="panel-collapse collapse">
+      <ul class="list-group">
+          <li class="list-group-item">
+              <div class="row">
+                  <div class="col-md-10">
+                      <strong>Type: </strong>Scheduled run<br/>
+                      
+                      
+                      <strong>Commit: </strong><a href="https://github.com/org/repo/commit/22c815614b">22c815614b</a><br/>
+                      
+                      
+                      <strong>Started: </strong>2022-04-26 13:35:05 &#43;0000 UTC (took 60 sec)<br/>
+                      
+                      
+                  </div>
+                  <div class="col-md-2"><button data-namespace="fuz" class="force-button force-namespace-button btn btn-warning btn-s"><strong>Force apply run</strong></button></div>
+              </div>
+          </li>
+          
+          <li class="list-group-item">
+              <pre class="file-output">$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/fuz | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
+namespace/fuz unchanged
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged
+configmap/postgres-init unchanged
+configmap/postgres-env unchanged
+service/postgres unchanged
+service/webapp unchanged
+limitrange/default configured
+persistentvolumeclaim/postgres unchanged
+deployment.apps/postgres unchanged
+deployment.apps/webapp configured
+waybill.kube-applier.io/main unchanged
+networkpolicy.networking.k8s.io/default unchanged
+Warning: autoscaling/v2beta1 HorizontalPodAutoscaler is deprecated in v1.22&#43;, unavailable in v1.25&#43;; use autoscaling/v2beta2 HorizontalPodAutoscaler
+Warning: batch/v1beta1 CronJob is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use batch/v1 CronJob
+Warning: policy/v1beta1 PodDisruptionBudget is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use policy/v1 PodDisruptionBudget
+Warning: discovery.k8s.io/v1beta1 EndpointSlice is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use discovery.k8s.io/v1 EndpointSlice
+</pre>
+          </li>
+          
+          
+      </ul>
+  </div>
+  
+</div>
+
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        
+
+    
+</body>
+</html>
