@@ -137,3 +137,25 @@ func appliedRecently(waybill kubeapplierv1alpha1.Waybill) bool {
 	return waybill.Status.LastRun != nil &&
 		time.Since(waybill.Status.LastRun.Started.Time) < time.Minute*15
 }
+
+func splitByNewline(output string) []string {
+	return strings.Split(output, "\n")
+}
+
+func getOutputClass(l string) string {
+	l = strings.TrimSpace(l)
+	if warningCheckReg.MatchString(l) {
+		return "text-warning"
+	}
+	if strings.HasSuffix(l, "configured") {
+		return "text-primary"
+	}
+	if strings.Contains(l, "unable to recognize") ||
+		strings.HasPrefix(l, "error:") {
+		return "text-danger"
+	}
+	if strings.Contains(l, "dry run") {
+		return "text-info"
+	}
+	return ""
+}

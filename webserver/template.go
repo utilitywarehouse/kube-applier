@@ -19,6 +19,8 @@ func createTemplate(templatePath string) (*template.Template, error) {
 			"latency":         latency,
 			"appliedRecently": appliedRecently,
 			"status":          status,
+			"splitByNewline":  splitByNewline,
+			"getOutputClass":  getOutputClass,
 		}).
 		ParseFiles(templatePath)
 	if err != nil {

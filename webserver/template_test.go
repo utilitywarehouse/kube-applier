@@ -82,8 +82,12 @@ limitrange/default configured
 persistentvolumeclaim/postgres unchanged
 deployment.apps/postgres unchanged
 deployment.apps/webapp configured
+deployment.apps/scheduler configured
+Warning: autoscaling/v2beta1 HorizontalPodAutoscaler is deprecated in v1.22+, unavailable in v1.25+; use autoscaling/v2beta2 HorizontalPodAutoscaler
+Warning: batch/v1beta1 CronJob is deprecated in v1.21+, unavailable in v1.25+; use batch/v1 CronJob
 waybill.kube-applier.io/main unchanged
 networkpolicy.networking.k8s.io/default unchanged
+error: error validating "/tmp/dev/secrets.yaml": 
 unable to recognize "STDIN": no matches for kind "Ingress" in version "extensions/v1beta1"
 unable to recognize "STDIN": no matches for kind "Ingress" in version "extensions/v1beta1"
 `,

@@ -174,23 +174,51 @@
           </li>
           
           <li class="list-group-item">
-              <pre class="file-output">$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/zoo | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
-namespace/zoo unchanged
-serviceaccount/kube-applier-delegate unchanged
-rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged
-configmap/postgres-init unchanged
-configmap/postgres-env unchanged
-service/postgres unchanged
-service/webapp unchanged
-limitrange/default configured
-persistentvolumeclaim/postgres unchanged
-deployment.apps/postgres unchanged
-deployment.apps/webapp configured
-waybill.kube-applier.io/main unchanged
-networkpolicy.networking.k8s.io/default unchanged
-unable to recognize &#34;STDIN&#34;: no matches for kind &#34;Ingress&#34; in version &#34;extensions/v1beta1&#34;
-unable to recognize &#34;STDIN&#34;: no matches for kind &#34;Ingress&#34; in version &#34;extensions/v1beta1&#34;
-</pre>
+              <div class="file-output">
+                  <div>$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/zoo | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
+</div>
+                  
+                  <div>namespace/zoo unchanged</div>
+                  
+                  <div>serviceaccount/kube-applier-delegate unchanged</div>
+                  
+                  <div>rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged</div>
+                  
+                  <div>configmap/postgres-init unchanged</div>
+                  
+                  <div>configmap/postgres-env unchanged</div>
+                  
+                  <div>service/postgres unchanged</div>
+                  
+                  <div>service/webapp unchanged</div>
+                  
+                  <div class="text-primary">limitrange/default configured</div>
+                  
+                  <div>persistentvolumeclaim/postgres unchanged</div>
+                  
+                  <div>deployment.apps/postgres unchanged</div>
+                  
+                  <div class="text-primary">deployment.apps/webapp configured</div>
+                  
+                  <div class="text-primary">deployment.apps/scheduler configured</div>
+                  
+                  <div class="text-warning">Warning: autoscaling/v2beta1 HorizontalPodAutoscaler is deprecated in v1.22&#43;, unavailable in v1.25&#43;; use autoscaling/v2beta2 HorizontalPodAutoscaler</div>
+                  
+                  <div class="text-warning">Warning: batch/v1beta1 CronJob is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use batch/v1 CronJob</div>
+                  
+                  <div>waybill.kube-applier.io/main unchanged</div>
+                  
+                  <div>networkpolicy.networking.k8s.io/default unchanged</div>
+                  
+                  <div class="text-danger">error: error validating &#34;/tmp/dev/secrets.yaml&#34;: </div>
+                  
+                  <div class="text-danger">unable to recognize &#34;STDIN&#34;: no matches for kind &#34;Ingress&#34; in version &#34;extensions/v1beta1&#34;</div>
+                  
+                  <div class="text-danger">unable to recognize &#34;STDIN&#34;: no matches for kind &#34;Ingress&#34; in version &#34;extensions/v1beta1&#34;</div>
+                  
+                  <div></div>
+                  
+                </div>
           </li>
           
           
@@ -254,25 +282,47 @@ unable to recognize &#34;STDIN&#34;: no matches for kind &#34;Ingress&#34; in ve
           </li>
           
           <li class="list-group-item">
-              <pre class="file-output">$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/fuz | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
-namespace/fuz unchanged
-serviceaccount/kube-applier-delegate unchanged
-rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged
-configmap/postgres-init unchanged
-configmap/postgres-env unchanged
-service/postgres unchanged
-service/webapp unchanged
-limitrange/default configured
-persistentvolumeclaim/postgres unchanged
-deployment.apps/postgres unchanged
-deployment.apps/webapp configured
-waybill.kube-applier.io/main unchanged
-networkpolicy.networking.k8s.io/default unchanged
-Warning: autoscaling/v2beta1 HorizontalPodAutoscaler is deprecated in v1.22&#43;, unavailable in v1.25&#43;; use autoscaling/v2beta2 HorizontalPodAutoscaler
-Warning: batch/v1beta1 CronJob is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use batch/v1 CronJob
-Warning: policy/v1beta1 PodDisruptionBudget is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use policy/v1 PodDisruptionBudget
-Warning: discovery.k8s.io/v1beta1 EndpointSlice is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use discovery.k8s.io/v1 EndpointSlice
-</pre>
+              <div class="file-output">
+                  <div>$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/fuz | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
+</div>
+                  
+                  <div>namespace/fuz unchanged</div>
+                  
+                  <div>serviceaccount/kube-applier-delegate unchanged</div>
+                  
+                  <div>rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged</div>
+                  
+                  <div>configmap/postgres-init unchanged</div>
+                  
+                  <div>configmap/postgres-env unchanged</div>
+                  
+                  <div>service/postgres unchanged</div>
+                  
+                  <div>service/webapp unchanged</div>
+                  
+                  <div class="text-primary">limitrange/default configured</div>
+                  
+                  <div>persistentvolumeclaim/postgres unchanged</div>
+                  
+                  <div>deployment.apps/postgres unchanged</div>
+                  
+                  <div class="text-primary">deployment.apps/webapp configured</div>
+                  
+                  <div>waybill.kube-applier.io/main unchanged</div>
+                  
+                  <div>networkpolicy.networking.k8s.io/default unchanged</div>
+                  
+                  <div class="text-warning">Warning: autoscaling/v2beta1 HorizontalPodAutoscaler is deprecated in v1.22&#43;, unavailable in v1.25&#43;; use autoscaling/v2beta2 HorizontalPodAutoscaler</div>
+                  
+                  <div class="text-warning">Warning: batch/v1beta1 CronJob is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use batch/v1 CronJob</div>
+                  
+                  <div class="text-warning">Warning: policy/v1beta1 PodDisruptionBudget is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use policy/v1 PodDisruptionBudget</div>
+                  
+                  <div class="text-warning">Warning: discovery.k8s.io/v1beta1 EndpointSlice is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use discovery.k8s.io/v1 EndpointSlice</div>
+                  
+                  <div></div>
+                  
+                </div>
           </li>
           
           
@@ -336,21 +386,39 @@ Warning: discovery.k8s.io/v1beta1 EndpointSlice is deprecated in v1.21&#43;, una
           </li>
           
           <li class="list-group-item">
-              <pre class="file-output">$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/buz | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
-namespace/buz unchanged
-serviceaccount/kube-applier-delegate unchanged
-rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged
-configmap/postgres-init unchanged
-configmap/postgres-env unchanged
-service/postgres unchanged
-service/webapp unchanged
-limitrange/default configured
-persistentvolumeclaim/postgres unchanged
-deployment.apps/postgres unchanged
-deployment.apps/webapp configured
-waybill.kube-applier.io/main unchanged
-networkpolicy.networking.k8s.io/default unchanged
-</pre>
+              <div class="file-output">
+                  <div>$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/buz | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
+</div>
+                  
+                  <div>namespace/buz unchanged</div>
+                  
+                  <div>serviceaccount/kube-applier-delegate unchanged</div>
+                  
+                  <div>rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged</div>
+                  
+                  <div>configmap/postgres-init unchanged</div>
+                  
+                  <div>configmap/postgres-env unchanged</div>
+                  
+                  <div>service/postgres unchanged</div>
+                  
+                  <div>service/webapp unchanged</div>
+                  
+                  <div class="text-primary">limitrange/default configured</div>
+                  
+                  <div>persistentvolumeclaim/postgres unchanged</div>
+                  
+                  <div>deployment.apps/postgres unchanged</div>
+                  
+                  <div class="text-primary">deployment.apps/webapp configured</div>
+                  
+                  <div>waybill.kube-applier.io/main unchanged</div>
+                  
+                  <div>networkpolicy.networking.k8s.io/default unchanged</div>
+                  
+                  <div></div>
+                  
+                </div>
           </li>
           
           
@@ -388,13 +456,23 @@ networkpolicy.networking.k8s.io/default unchanged
           </li>
           
           <li class="list-group-item">
-              <pre class="file-output">$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/eng | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
-namespace/eng unchanged
-serviceaccount/kube-applier-delegate unchanged
-rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged
-waybill.kube-applier.io/main unchanged
-networkpolicy.networking.k8s.io/default unchanged
-</pre>
+              <div class="file-output">
+                  <div>$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/eng | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
+</div>
+                  
+                  <div>namespace/eng unchanged</div>
+                  
+                  <div>serviceaccount/kube-applier-delegate unchanged</div>
+                  
+                  <div>rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged</div>
+                  
+                  <div>waybill.kube-applier.io/main unchanged</div>
+                  
+                  <div>networkpolicy.networking.k8s.io/default unchanged</div>
+                  
+                  <div></div>
+                  
+                </div>
           </li>
           
           

@@ -106,7 +106,12 @@
           </li>
           {{ if .Waybill.Status.LastRun.Command }}
           <li class="list-group-item">
-              <pre class="file-output">{{ printf "$ %s\n" .Waybill.Status.LastRun.Command }}{{ .Waybill.Status.LastRun.Output }}</pre>
+              <div class="file-output">
+                  <div>{{ printf "$ %s\n" .Waybill.Status.LastRun.Command }}</div>
+                  {{ range  $l := splitByNewline .Waybill.Status.LastRun.Output }}
+                  <div{{if getOutputClass $l}} class="{{getOutputClass $l}}"{{ end }}>{{$l}}</div>
+                  {{ end }}
+               </div>
           </li>
           {{ end }}
           {{ if .Events }}
