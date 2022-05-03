@@ -28,7 +28,7 @@
                     <h4 class="panel-title">
                         <a data-toggle="collapse" href="#pending">
                             
-                                Pending Namespaces: 2 / 7
+                                Pending Namespaces: 1 / 8
                             
                         </a>
                     </h4>
@@ -46,12 +46,128 @@
 </div>
 
                     
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        
+
+        
+            
+<div class="row">
+    <div class="col-md-2"></div>
+    <div class="col-md-8">
+        <div class="panel-group">
+            <div class='panel panel-default '>
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#auto-apply-disabled">
+                            
+                                Auto Apply Disabled Namespaces: 1 / 8
+                            
+                        </a>
+                    </h4>
+                </div>
+                <div id="auto-apply-disabled" class="panel-group collapse in">
+                    
                         
 <div class="panel">
   <div class="panel-heading">
       <div class="panel-title">
-          <a data-toggle="collapse" href="#bar">bar </a>
+          <a data-toggle="collapse" href="#bar">bar (auto-apply disabled)</a>
       </div>
+  </div>
+  
+</div>
+
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        
+
+        
+            
+<div class="row">
+    <div class="col-md-2"></div>
+    <div class="col-md-8">
+        <div class="panel-group">
+            <div class='panel panel-default '>
+                <div class="panel-heading">
+                    <h4 class="panel-title">
+                        <a data-toggle="collapse" href="#dry-run">
+                            
+                                Dry Run Only Namespaces: 1 / 8
+                            
+                        </a>
+                    </h4>
+                </div>
+                <div id="dry-run" class="panel-group collapse in">
+                    
+                        
+<div class="panel">
+  <div class="panel-heading">
+      <div class="panel-title">
+          <a data-toggle="collapse" href="#biz">biz (dry-run)</a>
+      </div>
+  </div>
+  
+  <div id="biz" class="panel-collapse collapse">
+      <ul class="list-group">
+          <li class="list-group-item">
+              <div class="row">
+                  <div class="col-md-10">
+                      <strong>Type: </strong>Scheduled run<br/>
+                      
+                      
+                      <strong>Commit: </strong><a href="https://github.com/org/repo/commit/22c815614b">22c815614b</a><br/>
+                      
+                      
+                      <strong>Started: </strong>2022-04-26 13:35:05 &#43;0000 UTC (took 60 sec)<br/>
+                      
+                      
+                      <strong>Error Message: </strong>exit status 1
+                      
+                  </div>
+                  <div class="col-md-2"><button data-namespace="biz" class="force-button force-namespace-button btn btn-warning btn-s"><strong>Force apply run</strong></button></div>
+              </div>
+          </li>
+          
+          <li class="list-group-item">
+              <div class="file-output">
+                  <div>$ /usr/local/bin/kustomize build /tmp/run_biz_main_repo_2305192794/dev/biz | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n biz --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
+</div>
+                  
+                  <div>namespace/biz unchanged (server dry run)</div>
+                  
+                  <div>serviceaccount/fluentd unchanged (server dry run)</div>
+                  
+                  <div>serviceaccount/forwarder unchanged (server dry run)</div>
+                  
+                  <div>serviceaccount/kube-applier-delegate unchanged (server dry run)</div>
+                  
+                  <div>serviceaccount/loki unchanged (server dry run)</div>
+                  
+                  <div class="text-primary">rolebinding.rbac.authorization.k8s.io/admin configured (server dry run)</div>
+                  
+                  <div>rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged (server dry run)</div>
+                  
+                  <div class="text-warning">Warning: batch/v1beta1 CronJob is deprecated in v1.21&#43;, unavailable in v1.25&#43;; use batch/v1 CronJob</div>
+                  
+                  <div>secret/kube-applier-delegate-token unchanged (server dry run)</div>
+                  
+                  <div></div>
+                  
+               </div>
+          </li>
+          
+          
+      </ul>
   </div>
   
 </div>
@@ -76,7 +192,7 @@
                     <h4 class="panel-title">
                         <a data-toggle="collapse" href="#failure">
                             
-                                Failed Namespaces: 2 / 7
+                                Failed Namespaces: 2 / 8
                             
                         </a>
                     </h4>
@@ -247,7 +363,7 @@
                     <h4 class="panel-title">
                         <a data-toggle="collapse" href="#warning">
                             
-                                Applied Namespaces (with warning): 1 / 7
+                                Applied Namespaces (with warning): 1 / 8
                             
                         </a>
                     </h4>
@@ -283,7 +399,7 @@
           
           <li class="list-group-item">
               <div class="file-output">
-                  <div>$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/fuz | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
+                  <div>$ /usr/local/bin/kustomize build /tmp/run_fuz_main_repo_2305192794/dev/fuz | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n fuz --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
 </div>
                   
                   <div>namespace/fuz unchanged</div>
@@ -351,7 +467,7 @@
                     <h4 class="panel-title">
                         <a data-toggle="collapse" href="#success">
                             
-                                Applied Namespaces: 2 / 7
+                                Applied Namespaces: 2 / 8
                             
                         </a>
                     </h4>
@@ -387,7 +503,7 @@
           
           <li class="list-group-item">
               <div class="file-output">
-                  <div>$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/buz | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
+                  <div>$ /usr/local/bin/kustomize build /tmp/run_buz_main_repo_2305192794/dev/buz | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n buz --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
 </div>
                   
                   <div>namespace/buz unchanged</div>
@@ -457,7 +573,7 @@
           
           <li class="list-group-item">
               <div class="file-output">
-                  <div>$ /usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/eng | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
+                  <div>$ /usr/local/bin/kustomize build /tmp/run_eng_main_repo_2305192794/dev/eng | /usr/local/bin/kubectl apply -f - --token=&lt;omitted&gt; -n eng --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged
 </div>
                   
                   <div>namespace/eng unchanged</div>

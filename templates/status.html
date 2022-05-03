@@ -21,6 +21,14 @@
         {{ if (filter . "pending").Namespaces }}
             {{template "section" (filter . "pending")}}
         {{ end }}
+
+        {{ if (filter . "auto-apply-disabled").Namespaces }}
+            {{template "section" (filter . "auto-apply-disabled")}}
+        {{ end }}
+
+        {{ if (filter . "dry-run").Namespaces }}
+            {{template "section" (filter . "dry-run")}}
+        {{ end }}
         
         {{ if (filter . "failure").Namespaces }}
             {{template "section" (filter . "failure")}}
@@ -53,6 +61,12 @@
                     <h4 class="panel-title">
                         <a data-toggle="collapse" href="#{{$.Outcome}}">
                             {{if eq $.Outcome "pending"}}
+                                Pending Namespaces: {{ len .Namespaces }} / {{ .Total }}
+                            {{else if eq $.Outcome "auto-apply-disabled"}}
+                                Auto Apply Disabled Namespaces: {{ len .Namespaces }} / {{ .Total }}
+                            {{else if eq $.Outcome "dry-run"}}
+                                Dry Run Only Namespaces: {{ len .Namespaces }} / {{ .Total }}
+                            {{else if eq $.Outcome "pending"}}
                                 Pending Namespaces: {{ len .Namespaces }} / {{ .Total }}
                             {{else if eq $.Outcome "failure"}}
                                 Failed Namespaces: {{ len .Namespaces }} / {{ .Total }}

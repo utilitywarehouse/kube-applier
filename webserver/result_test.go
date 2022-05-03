@@ -12,6 +12,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var varTrue = true
+var varFalse = false
+
 type formattingTestCases struct {
 	Start                   time.Time
 	Finish                  time.Time
@@ -59,27 +62,23 @@ func TestResultLatency(t *testing.T) {
 
 var waybills = []kubeapplierv1alpha1.Waybill{
 	{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "app-a", Name: "main"},
-		Status: kubeapplierv1alpha1.WaybillStatus{
-			LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-				Success: true,
-			},
-		},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test-success", Name: "main"},
+		Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{Success: true}},
+		Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
 	},
 	{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "app-b", Name: "main"},
-		Status: kubeapplierv1alpha1.WaybillStatus{
-			LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-				Success: false,
-			},
-		},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test-failure", Name: "main"},
+		Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{}},
+		Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
 	},
 	{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "app-c", Name: "main"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test-pending", Name: "main"},
 		Status:     kubeapplierv1alpha1.WaybillStatus{},
+		Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
 	},
 	{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "app-e", Name: "main"},
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test-warning", Name: "main"},
+		Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
 		Status: kubeapplierv1alpha1.WaybillStatus{
 			LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
 				Success: true,
@@ -89,21 +88,63 @@ serviceaccount/kube-applier-delegate unchanged
 rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
 		},
 	},
+	{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test-dryrun", Name: "main"},
+		Status:     kubeapplierv1alpha1.WaybillStatus{},
+		Spec:       kubeapplierv1alpha1.WaybillSpec{DryRun: true},
+	},
+	{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test-dryrun-warning", Name: "main"},
+		Spec:       kubeapplierv1alpha1.WaybillSpec{DryRun: true},
+		Status: kubeapplierv1alpha1.WaybillStatus{
+			LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+				Success: true,
+				Output: `namespace/zoo unchanged
+Warning: batch/v1beta1 CronJob is deprecated in v1.21+, unavailable in v1.25+; use batch/v1 CronJob
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
+		},
+	}, {
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test-dryrun-failure", Name: "main"},
+		Spec:       kubeapplierv1alpha1.WaybillSpec{DryRun: true},
+		Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{}},
+	},
+	{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test-disabled-AA", Name: "main"},
+		Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varFalse},
+		Status:     kubeapplierv1alpha1.WaybillStatus{},
+	},
+	{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test-disabled-AA-warning", Name: "main"},
+		Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varFalse},
+		Status: kubeapplierv1alpha1.WaybillStatus{
+			LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+				Success: true,
+				Output: `namespace/zoo unchanged
+Warning: batch/v1beta1 CronJob is deprecated in v1.21+, unavailable in v1.25+; use batch/v1 CronJob
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
+		},
+	}, {
+		ObjectMeta: metav1.ObjectMeta{Namespace: "test-disabled-AA-failure", Name: "main"},
+		Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varFalse},
+		Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{}},
+	},
 }
 
 var events = []corev1.Event{
 	{
 		TypeMeta:       metav1.TypeMeta{Kind: "Event", APIVersion: "v1"},
-		ObjectMeta:     metav1.ObjectMeta{Name: "main", Namespace: "app-b"},
+		ObjectMeta:     metav1.ObjectMeta{Name: "main", Namespace: "test-failure"},
 		Type:           "Warning",
-		InvolvedObject: corev1.ObjectReference{Kind: "Waybill", Namespace: "app-b", Name: "main"},
+		InvolvedObject: corev1.ObjectReference{Kind: "Waybill", Namespace: "test-failure", Name: "main"},
 		Reason:         "WaybillRunRequestFailed",
 	},
 	{
 		TypeMeta:       metav1.TypeMeta{Kind: "Event", APIVersion: "v1"},
-		ObjectMeta:     metav1.ObjectMeta{Name: "main", Namespace: "app-c"},
+		ObjectMeta:     metav1.ObjectMeta{Name: "main", Namespace: "test-pending"},
 		Type:           "Error",
-		InvolvedObject: corev1.ObjectReference{Kind: "Waybill", Namespace: "app-c", Name: "main"},
+		InvolvedObject: corev1.ObjectReference{Kind: "Waybill", Namespace: "test-pending", Name: "main"},
 		Reason:         "WaybillRunRequestFailed",
 	},
 }
@@ -111,16 +152,24 @@ var events = []corev1.Event{
 func Test_GetNamespaces(t *testing.T) {
 	want := []Namespace{
 		{
-			Waybill:       v1alpha1.Waybill{ObjectMeta: metav1.ObjectMeta{Namespace: "app-a", Name: "main"}, Status: v1alpha1.WaybillStatus{LastRun: &v1alpha1.WaybillStatusRun{Success: true}}},
+			Waybill: v1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "test-success", Name: "main"},
+				Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{Success: true}},
+				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
+			},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s",
 		},
 		{
-			Waybill: v1alpha1.Waybill{ObjectMeta: metav1.ObjectMeta{Namespace: "app-b", Name: "main"}, Status: v1alpha1.WaybillStatus{LastRun: &v1alpha1.WaybillStatusRun{}}},
+			Waybill: v1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "test-failure", Name: "main"},
+				Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{}},
+				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
+			},
 			Events: []corev1.Event{
 				{
 					TypeMeta:       metav1.TypeMeta{Kind: "Event", APIVersion: "v1"},
-					ObjectMeta:     metav1.ObjectMeta{Name: "main", Namespace: "app-b"},
-					InvolvedObject: corev1.ObjectReference{Kind: "Waybill", Namespace: "app-b", Name: "main"},
+					ObjectMeta:     metav1.ObjectMeta{Name: "main", Namespace: "test-failure"},
+					InvolvedObject: corev1.ObjectReference{Kind: "Waybill", Namespace: "test-failure", Name: "main"},
 					Reason:         "WaybillRunRequestFailed",
 					Type:           "Warning",
 				},
@@ -128,12 +177,16 @@ func Test_GetNamespaces(t *testing.T) {
 			DiffURLFormat: "https://github.com/org/repo/commit/%s",
 		},
 		{
-			Waybill: v1alpha1.Waybill{ObjectMeta: metav1.ObjectMeta{Namespace: "app-c", Name: "main"}},
+			Waybill: v1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "test-pending", Name: "main"},
+				Status:     kubeapplierv1alpha1.WaybillStatus{},
+				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
+			},
 			Events: []corev1.Event{
 				{
 					TypeMeta:       metav1.TypeMeta{Kind: "Event", APIVersion: "v1"},
-					ObjectMeta:     metav1.ObjectMeta{Name: "main", Namespace: "app-c"},
-					InvolvedObject: corev1.ObjectReference{Kind: "Waybill", Namespace: "app-c", Name: "main"},
+					ObjectMeta:     metav1.ObjectMeta{Name: "main", Namespace: "test-pending"},
+					InvolvedObject: corev1.ObjectReference{Kind: "Waybill", Namespace: "test-pending", Name: "main"},
 					Reason:         "WaybillRunRequestFailed",
 					Type:           "Error",
 				},
@@ -142,7 +195,8 @@ func Test_GetNamespaces(t *testing.T) {
 		},
 		{
 			Waybill: v1alpha1.Waybill{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "app-e", Name: "main"},
+				ObjectMeta: metav1.ObjectMeta{Namespace: "test-warning", Name: "main"},
+				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
 				Status: kubeapplierv1alpha1.WaybillStatus{
 					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
 						Success: true,
@@ -151,6 +205,66 @@ Warning: batch/v1beta1 CronJob is deprecated in v1.21+, unavailable in v1.25+; u
 serviceaccount/kube-applier-delegate unchanged
 rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
 				},
+			},
+			DiffURLFormat: "https://github.com/org/repo/commit/%s",
+		}, {
+			Waybill: v1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "test-dryrun", Name: "main"},
+				Status:     kubeapplierv1alpha1.WaybillStatus{},
+				Spec:       kubeapplierv1alpha1.WaybillSpec{DryRun: true},
+			},
+			DiffURLFormat: "https://github.com/org/repo/commit/%s",
+		},
+		{
+			Waybill: v1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "test-dryrun-warning", Name: "main"},
+				Spec:       kubeapplierv1alpha1.WaybillSpec{DryRun: true},
+				Status: kubeapplierv1alpha1.WaybillStatus{
+					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+						Success: true,
+						Output: `namespace/zoo unchanged
+Warning: batch/v1beta1 CronJob is deprecated in v1.21+, unavailable in v1.25+; use batch/v1 CronJob
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
+				},
+			},
+			DiffURLFormat: "https://github.com/org/repo/commit/%s",
+		},
+		{
+			Waybill: v1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "test-dryrun-failure"},
+				Spec:       v1alpha1.WaybillSpec{DryRun: true},
+				Status:     v1alpha1.WaybillStatus{LastRun: &v1alpha1.WaybillStatusRun{}},
+			},
+			DiffURLFormat: "https://github.com/org/repo/commit/%s",
+		},
+		{
+			Waybill: v1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "test-disabled-AA"},
+				Spec:       v1alpha1.WaybillSpec{AutoApply: &varFalse},
+			},
+			DiffURLFormat: "https://github.com/org/repo/commit/%s",
+		},
+		{
+			Waybill: v1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "test-disabled-AA-warning"},
+				Spec:       v1alpha1.WaybillSpec{AutoApply: &varFalse},
+				Status: kubeapplierv1alpha1.WaybillStatus{
+					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+						Success: true,
+						Output: `namespace/zoo unchanged
+Warning: batch/v1beta1 CronJob is deprecated in v1.21+, unavailable in v1.25+; use batch/v1 CronJob
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
+				},
+			},
+			DiffURLFormat: "https://github.com/org/repo/commit/%s",
+		},
+		{
+			Waybill: v1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "test-disabled-AA-failure"},
+				Spec:       v1alpha1.WaybillSpec{AutoApply: &varFalse},
+				Status:     v1alpha1.WaybillStatus{LastRun: &v1alpha1.WaybillStatusRun{}},
 			},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s",
 		},
@@ -173,24 +287,27 @@ func Test_filter(t *testing.T) {
 		args args
 		want Filtered
 	}{
-		{"unknown", args{"unknown"}, Filtered{Outcome: "unknown", Total: 4}},
-		{"pending", args{"pending"}, Filtered{Outcome: "pending", Total: 4, Namespaces: []Namespace{{
-			Waybill:       v1alpha1.Waybill{ObjectMeta: metav1.ObjectMeta{Namespace: "app-c", Name: "main"}},
+		{"unknown", args{"unknown"}, Filtered{FilteredBy: "unknown", Total: 10}},
+		{"pending", args{"pending"}, Filtered{FilteredBy: "pending", Total: 10, Namespaces: []Namespace{{
+			Waybill: v1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "test-pending", Name: "main"},
+				Status:     kubeapplierv1alpha1.WaybillStatus{},
+				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
+			},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s"}}},
 		},
-		{"failure", args{"failure"}, Filtered{Outcome: "failure", Total: 4, Namespaces: []Namespace{{
+		{"failure", args{"failure"}, Filtered{FilteredBy: "failure", Total: 10, Namespaces: []Namespace{{
 			Waybill: v1alpha1.Waybill{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "app-b", Name: "main"},
-				Status: kubeapplierv1alpha1.WaybillStatus{
-					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-						Success: false,
-					},
-				}},
+				ObjectMeta: metav1.ObjectMeta{Namespace: "test-failure", Name: "main"},
+				Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{}},
+				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
+			},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s"}}},
 		},
-		{"warning", args{"warning"}, Filtered{Outcome: "warning", Total: 4, Namespaces: []Namespace{{
+		{"warning", args{"warning"}, Filtered{FilteredBy: "warning", Total: 10, Namespaces: []Namespace{{
 			Waybill: v1alpha1.Waybill{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "app-e", Name: "main"},
+				ObjectMeta: metav1.ObjectMeta{Namespace: "test-warning", Name: "main"},
+				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
 				Status: kubeapplierv1alpha1.WaybillStatus{
 					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
 						Success: true,
@@ -202,15 +319,81 @@ rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
 			},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s"}}},
 		},
-		{"success", args{"success"}, Filtered{Outcome: "success", Total: 4, Namespaces: []Namespace{{
+		{"success", args{"success"}, Filtered{FilteredBy: "success", Total: 10, Namespaces: []Namespace{{
 			Waybill: v1alpha1.Waybill{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "app-a", Name: "main"},
-				Status: kubeapplierv1alpha1.WaybillStatus{
-					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-						Success: true,
-					},
-				}},
+				ObjectMeta: metav1.ObjectMeta{Namespace: "test-success", Name: "main"},
+				Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{Success: true}},
+				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
+			},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s"}}},
+		},
+		{"dry-run", args{"dry-run"}, Filtered{FilteredBy: "dry-run", Total: 10, Namespaces: []Namespace{
+			{
+				Waybill: v1alpha1.Waybill{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "test-dryrun", Name: "main"},
+					Status:     kubeapplierv1alpha1.WaybillStatus{},
+					Spec:       kubeapplierv1alpha1.WaybillSpec{DryRun: true},
+				},
+				DiffURLFormat: "https://github.com/org/repo/commit/%s",
+			},
+			{
+				Waybill: v1alpha1.Waybill{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "test-dryrun-warning", Name: "main"},
+					Spec:       kubeapplierv1alpha1.WaybillSpec{DryRun: true},
+					Status: kubeapplierv1alpha1.WaybillStatus{
+						LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+							Success: true,
+							Output: `namespace/zoo unchanged
+Warning: batch/v1beta1 CronJob is deprecated in v1.21+, unavailable in v1.25+; use batch/v1 CronJob
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
+					},
+				},
+				DiffURLFormat: "https://github.com/org/repo/commit/%s",
+			},
+			{
+				Waybill: v1alpha1.Waybill{
+					ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "test-dryrun-failure"},
+					Spec:       v1alpha1.WaybillSpec{DryRun: true},
+					Status:     v1alpha1.WaybillStatus{LastRun: &v1alpha1.WaybillStatusRun{}},
+				},
+				DiffURLFormat: "https://github.com/org/repo/commit/%s",
+			},
+		}},
+		},
+		{"auto-apply-disabled", args{"auto-apply-disabled"}, Filtered{FilteredBy: "auto-apply-disabled", Total: 10, Namespaces: []Namespace{
+			{
+				Waybill: v1alpha1.Waybill{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "test-disabled-AA", Name: "main"},
+					Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varFalse},
+					Status:     kubeapplierv1alpha1.WaybillStatus{},
+				},
+				DiffURLFormat: "https://github.com/org/repo/commit/%s",
+			},
+			{
+				Waybill: v1alpha1.Waybill{
+					ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "test-disabled-AA-warning"},
+					Spec:       v1alpha1.WaybillSpec{AutoApply: &varFalse},
+					Status: kubeapplierv1alpha1.WaybillStatus{
+						LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+							Success: true,
+							Output: `namespace/zoo unchanged
+Warning: batch/v1beta1 CronJob is deprecated in v1.21+, unavailable in v1.25+; use batch/v1 CronJob
+serviceaccount/kube-applier-delegate unchanged
+rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
+					},
+				},
+				DiffURLFormat: "https://github.com/org/repo/commit/%s",
+			},
+			{
+				Waybill: v1alpha1.Waybill{
+					ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "test-disabled-AA-failure"},
+					Spec:       v1alpha1.WaybillSpec{AutoApply: &varFalse},
+					Status:     v1alpha1.WaybillStatus{LastRun: &v1alpha1.WaybillStatusRun{}},
+				},
+				DiffURLFormat: "https://github.com/org/repo/commit/%s",
+			},
+		}},
 		},
 	}
 	for _, tt := range tests {

@@ -50,39 +50,63 @@ func waybillEvents(wb *kubeapplierv1alpha1.Waybill, allEvents []corev1.Event) []
 
 // Filtered stores collections of Namespaces with same outsome
 type Filtered struct {
-	Outcome    string
+	FilteredBy string
 	Total      int
 	Namespaces []Namespace
 }
 
-func filter(Namespaces []Namespace, outcome string) Filtered {
+func filter(Namespaces []Namespace, filteredBy string) Filtered {
 	filtered := Filtered{
-		Outcome: outcome,
-		Total:   len(Namespaces),
+		FilteredBy: filteredBy,
+		Total:      len(Namespaces),
 	}
 	for _, ns := range Namespaces {
-		switch outcome {
-		case "pending":
-			if ns.Waybill.Status.LastRun == nil {
+
+		// specs specific filters
+		switch filteredBy {
+		case "auto-apply-disabled":
+			if !isAutoApplyEnabled(ns) {
 				filtered.Namespaces = append(filtered.Namespaces, ns)
 			}
-		case "failure":
-			if ns.Waybill.Status.LastRun != nil && !ns.Waybill.Status.LastRun.Success {
+		case "dry-run":
+			if ns.Waybill.Spec.DryRun {
 				filtered.Namespaces = append(filtered.Namespaces, ns)
 			}
-		case "warning":
-			if ns.Waybill.Status.LastRun != nil && ns.Waybill.Status.LastRun.Success &&
-				isOutcomeHasWarnings(ns.Waybill.Status.LastRun.Output) {
-				filtered.Namespaces = append(filtered.Namespaces, ns)
-			}
-		case "success":
-			if ns.Waybill.Status.LastRun != nil && ns.Waybill.Status.LastRun.Success &&
-				!isOutcomeHasWarnings(ns.Waybill.Status.LastRun.Output) {
-				filtered.Namespaces = append(filtered.Namespaces, ns)
+		}
+
+		// Following outcome(filters) only applies if DryRun is Disabled && autoApply is Enabled.
+		if !ns.Waybill.Spec.DryRun && isAutoApplyEnabled(ns) {
+			switch filteredBy {
+			case "pending":
+				if ns.Waybill.Status.LastRun == nil {
+					filtered.Namespaces = append(filtered.Namespaces, ns)
+				}
+			case "failure":
+				if ns.Waybill.Status.LastRun != nil && !ns.Waybill.Status.LastRun.Success {
+					filtered.Namespaces = append(filtered.Namespaces, ns)
+				}
+			case "warning":
+				if ns.Waybill.Status.LastRun != nil && ns.Waybill.Status.LastRun.Success &&
+					isOutcomeHasWarnings(ns.Waybill.Status.LastRun.Output) {
+					filtered.Namespaces = append(filtered.Namespaces, ns)
+				}
+			case "success":
+				if ns.Waybill.Status.LastRun != nil && ns.Waybill.Status.LastRun.Success &&
+					!isOutcomeHasWarnings(ns.Waybill.Status.LastRun.Output) {
+					filtered.Namespaces = append(filtered.Namespaces, ns)
+				}
 			}
 		}
 	}
 	return filtered
+}
+
+func isAutoApplyEnabled(ns Namespace) bool {
+	if ns.Waybill.Spec.AutoApply != nil {
+		return *ns.Waybill.Spec.AutoApply
+	}
+	// default AutoApply value is true
+	return true
 }
 
 func isOutcomeHasWarnings(output string) bool {
@@ -147,15 +171,13 @@ func getOutputClass(l string) string {
 	if warningCheckReg.MatchString(l) {
 		return "text-warning"
 	}
-	if strings.HasSuffix(l, "configured") {
+	if strings.HasSuffix(l, "configured") ||
+		strings.HasSuffix(l, "configured (server dry run)") {
 		return "text-primary"
 	}
 	if strings.Contains(l, "unable to recognize") ||
 		strings.HasPrefix(l, "error:") {
 		return "text-danger"
-	}
-	if strings.Contains(l, "dry run") {
-		return "text-info"
 	}
 	return ""
 }
