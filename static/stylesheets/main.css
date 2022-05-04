@@ -1,13 +1,23 @@
-pre.file-output {
+.file-output {
+	display: block;
+	padding: 10px;
+	margin: 0 0 10px;
+	color: #333;
+	background-color: #f5f5f5;
+	border: 1px solid #ccc;
+	border-radius: 4px;
 	font-family: Monaco;
 	font-size: 10px;
+	white-space: nowrap;
+	overflow: scroll;
 }
 
 pre.commit {
 	font-size: 12px;
 }
 
-#successes>.panel:nth-of-type(odd), #failures>.panel:nth-of-type(odd) {
+
+.panel:nth-of-type(odd) {
 	background-color: #f9f9f9;
 }
 
