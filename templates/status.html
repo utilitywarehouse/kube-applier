@@ -56,29 +56,29 @@
     <div class="col-md-2"></div>
     <div class="col-md-8">
         <div class="panel-group">
-            <div class='panel panel-default {{if eq $.Outcome "success"}}panel-success{{else if eq $.Outcome "failure"}}panel-danger{{else if eq $.Outcome "warning"}}panel-warning{{end}}'>
+            <div class='panel panel-default {{if eq $.FilteredBy "success"}}panel-success{{else if eq $.FilteredBy "failure"}}panel-danger{{else if eq $.FilteredBy "warning"}}panel-warning{{end}}'>
                 <div class="panel-heading">
                     <h4 class="panel-title">
-                        <a data-toggle="collapse" href="#{{$.Outcome}}">
-                            {{if eq $.Outcome "pending"}}
+                        <a data-toggle="collapse" href="#{{$.FilteredBy}}">
+                            {{if eq $.FilteredBy "pending"}}
                                 Pending Namespaces: {{ len .Namespaces }} / {{ .Total }}
-                            {{else if eq $.Outcome "auto-apply-disabled"}}
+                            {{else if eq $.FilteredBy "auto-apply-disabled"}}
                                 Auto Apply Disabled Namespaces: {{ len .Namespaces }} / {{ .Total }}
-                            {{else if eq $.Outcome "dry-run"}}
+                            {{else if eq $.FilteredBy "dry-run"}}
                                 Dry Run Only Namespaces: {{ len .Namespaces }} / {{ .Total }}
-                            {{else if eq $.Outcome "pending"}}
+                            {{else if eq $.FilteredBy "pending"}}
                                 Pending Namespaces: {{ len .Namespaces }} / {{ .Total }}
-                            {{else if eq $.Outcome "failure"}}
+                            {{else if eq $.FilteredBy "failure"}}
                                 Failed Namespaces: {{ len .Namespaces }} / {{ .Total }}
-                            {{else if eq $.Outcome "warning"}}
+                            {{else if eq $.FilteredBy "warning"}}
                                 Applied Namespaces (with warning): {{ len .Namespaces }} / {{ .Total }}
-                            {{else if eq $.Outcome "success"}}
+                            {{else if eq $.FilteredBy "success"}}
                                 Applied Namespaces: {{ len .Namespaces }} / {{ .Total }}
                             {{end}}
                         </a>
                     </h4>
                 </div>
-                <div id="{{$.Outcome}}" class="panel-group collapse in">
+                <div id="{{$.FilteredBy}}" class="panel-group collapse in">
                     {{ range $wb :=  .Namespaces }}
                         {{template "namespace" $wb}}
                     {{ end }}
