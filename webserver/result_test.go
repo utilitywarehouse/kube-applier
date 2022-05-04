@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
-	"github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -152,7 +151,7 @@ var events = []corev1.Event{
 func Test_GetNamespaces(t *testing.T) {
 	want := []Namespace{
 		{
-			Waybill: v1alpha1.Waybill{
+			Waybill: kubeapplierv1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "test-success", Name: "main"},
 				Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{Success: true}},
 				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
@@ -160,7 +159,7 @@ func Test_GetNamespaces(t *testing.T) {
 			DiffURLFormat: "https://github.com/org/repo/commit/%s",
 		},
 		{
-			Waybill: v1alpha1.Waybill{
+			Waybill: kubeapplierv1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "test-failure", Name: "main"},
 				Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{}},
 				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
@@ -177,7 +176,7 @@ func Test_GetNamespaces(t *testing.T) {
 			DiffURLFormat: "https://github.com/org/repo/commit/%s",
 		},
 		{
-			Waybill: v1alpha1.Waybill{
+			Waybill: kubeapplierv1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "test-pending", Name: "main"},
 				Status:     kubeapplierv1alpha1.WaybillStatus{},
 				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
@@ -194,7 +193,7 @@ func Test_GetNamespaces(t *testing.T) {
 			DiffURLFormat: "https://github.com/org/repo/commit/%s",
 		},
 		{
-			Waybill: v1alpha1.Waybill{
+			Waybill: kubeapplierv1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "test-warning", Name: "main"},
 				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
 				Status: kubeapplierv1alpha1.WaybillStatus{
@@ -208,7 +207,7 @@ rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
 			},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s",
 		}, {
-			Waybill: v1alpha1.Waybill{
+			Waybill: kubeapplierv1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "test-dryrun", Name: "main"},
 				Status:     kubeapplierv1alpha1.WaybillStatus{},
 				Spec:       kubeapplierv1alpha1.WaybillSpec{DryRun: true},
@@ -216,7 +215,7 @@ rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s",
 		},
 		{
-			Waybill: v1alpha1.Waybill{
+			Waybill: kubeapplierv1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "test-dryrun-warning", Name: "main"},
 				Spec:       kubeapplierv1alpha1.WaybillSpec{DryRun: true},
 				Status: kubeapplierv1alpha1.WaybillStatus{
@@ -231,24 +230,24 @@ rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s",
 		},
 		{
-			Waybill: v1alpha1.Waybill{
+			Waybill: kubeapplierv1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "test-dryrun-failure"},
-				Spec:       v1alpha1.WaybillSpec{DryRun: true},
-				Status:     v1alpha1.WaybillStatus{LastRun: &v1alpha1.WaybillStatusRun{}},
+				Spec:       kubeapplierv1alpha1.WaybillSpec{DryRun: true},
+				Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{}},
 			},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s",
 		},
 		{
-			Waybill: v1alpha1.Waybill{
+			Waybill: kubeapplierv1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "test-disabled-AA"},
-				Spec:       v1alpha1.WaybillSpec{AutoApply: &varFalse},
+				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varFalse},
 			},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s",
 		},
 		{
-			Waybill: v1alpha1.Waybill{
+			Waybill: kubeapplierv1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "test-disabled-AA-warning"},
-				Spec:       v1alpha1.WaybillSpec{AutoApply: &varFalse},
+				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varFalse},
 				Status: kubeapplierv1alpha1.WaybillStatus{
 					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
 						Success: true,
@@ -261,10 +260,10 @@ rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s",
 		},
 		{
-			Waybill: v1alpha1.Waybill{
+			Waybill: kubeapplierv1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "test-disabled-AA-failure"},
-				Spec:       v1alpha1.WaybillSpec{AutoApply: &varFalse},
-				Status:     v1alpha1.WaybillStatus{LastRun: &v1alpha1.WaybillStatusRun{}},
+				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varFalse},
+				Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{}},
 			},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s",
 		},
@@ -289,7 +288,7 @@ func Test_filter(t *testing.T) {
 	}{
 		{"unknown", args{"unknown"}, Filtered{FilteredBy: "unknown", Total: 10}},
 		{"pending", args{"pending"}, Filtered{FilteredBy: "pending", Total: 10, Namespaces: []Namespace{{
-			Waybill: v1alpha1.Waybill{
+			Waybill: kubeapplierv1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "test-pending", Name: "main"},
 				Status:     kubeapplierv1alpha1.WaybillStatus{},
 				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
@@ -297,7 +296,7 @@ func Test_filter(t *testing.T) {
 			DiffURLFormat: "https://github.com/org/repo/commit/%s"}}},
 		},
 		{"failure", args{"failure"}, Filtered{FilteredBy: "failure", Total: 10, Namespaces: []Namespace{{
-			Waybill: v1alpha1.Waybill{
+			Waybill: kubeapplierv1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "test-failure", Name: "main"},
 				Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{}},
 				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
@@ -305,7 +304,7 @@ func Test_filter(t *testing.T) {
 			DiffURLFormat: "https://github.com/org/repo/commit/%s"}}},
 		},
 		{"warning", args{"warning"}, Filtered{FilteredBy: "warning", Total: 10, Namespaces: []Namespace{{
-			Waybill: v1alpha1.Waybill{
+			Waybill: kubeapplierv1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "test-warning", Name: "main"},
 				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
 				Status: kubeapplierv1alpha1.WaybillStatus{
@@ -320,7 +319,7 @@ rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
 			DiffURLFormat: "https://github.com/org/repo/commit/%s"}}},
 		},
 		{"success", args{"success"}, Filtered{FilteredBy: "success", Total: 10, Namespaces: []Namespace{{
-			Waybill: v1alpha1.Waybill{
+			Waybill: kubeapplierv1alpha1.Waybill{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "test-success", Name: "main"},
 				Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{Success: true}},
 				Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varTrue},
@@ -329,7 +328,7 @@ rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
 		},
 		{"dry-run", args{"dry-run"}, Filtered{FilteredBy: "dry-run", Total: 10, Namespaces: []Namespace{
 			{
-				Waybill: v1alpha1.Waybill{
+				Waybill: kubeapplierv1alpha1.Waybill{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "test-dryrun", Name: "main"},
 					Status:     kubeapplierv1alpha1.WaybillStatus{},
 					Spec:       kubeapplierv1alpha1.WaybillSpec{DryRun: true},
@@ -337,7 +336,7 @@ rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
 				DiffURLFormat: "https://github.com/org/repo/commit/%s",
 			},
 			{
-				Waybill: v1alpha1.Waybill{
+				Waybill: kubeapplierv1alpha1.Waybill{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "test-dryrun-warning", Name: "main"},
 					Spec:       kubeapplierv1alpha1.WaybillSpec{DryRun: true},
 					Status: kubeapplierv1alpha1.WaybillStatus{
@@ -352,10 +351,10 @@ rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
 				DiffURLFormat: "https://github.com/org/repo/commit/%s",
 			},
 			{
-				Waybill: v1alpha1.Waybill{
+				Waybill: kubeapplierv1alpha1.Waybill{
 					ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "test-dryrun-failure"},
-					Spec:       v1alpha1.WaybillSpec{DryRun: true},
-					Status:     v1alpha1.WaybillStatus{LastRun: &v1alpha1.WaybillStatusRun{}},
+					Spec:       kubeapplierv1alpha1.WaybillSpec{DryRun: true},
+					Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{}},
 				},
 				DiffURLFormat: "https://github.com/org/repo/commit/%s",
 			},
@@ -363,7 +362,7 @@ rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
 		},
 		{"auto-apply-disabled", args{"auto-apply-disabled"}, Filtered{FilteredBy: "auto-apply-disabled", Total: 10, Namespaces: []Namespace{
 			{
-				Waybill: v1alpha1.Waybill{
+				Waybill: kubeapplierv1alpha1.Waybill{
 					ObjectMeta: metav1.ObjectMeta{Namespace: "test-disabled-AA", Name: "main"},
 					Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varFalse},
 					Status:     kubeapplierv1alpha1.WaybillStatus{},
@@ -371,9 +370,9 @@ rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
 				DiffURLFormat: "https://github.com/org/repo/commit/%s",
 			},
 			{
-				Waybill: v1alpha1.Waybill{
+				Waybill: kubeapplierv1alpha1.Waybill{
 					ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "test-disabled-AA-warning"},
-					Spec:       v1alpha1.WaybillSpec{AutoApply: &varFalse},
+					Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varFalse},
 					Status: kubeapplierv1alpha1.WaybillStatus{
 						LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
 							Success: true,
@@ -386,10 +385,10 @@ rolebinding.rbac.authorization.k8s.io/kube-applier-delegate unchanged`},
 				DiffURLFormat: "https://github.com/org/repo/commit/%s",
 			},
 			{
-				Waybill: v1alpha1.Waybill{
+				Waybill: kubeapplierv1alpha1.Waybill{
 					ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "test-disabled-AA-failure"},
-					Spec:       v1alpha1.WaybillSpec{AutoApply: &varFalse},
-					Status:     v1alpha1.WaybillStatus{LastRun: &v1alpha1.WaybillStatusRun{}},
+					Spec:       kubeapplierv1alpha1.WaybillSpec{AutoApply: &varFalse},
+					Status:     kubeapplierv1alpha1.WaybillStatus{LastRun: &kubeapplierv1alpha1.WaybillStatusRun{}},
 				},
 				DiffURLFormat: "https://github.com/org/repo/commit/%s",
 			},
