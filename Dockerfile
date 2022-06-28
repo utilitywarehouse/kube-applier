@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine AS build
+FROM golang:1.18-alpine AS build
 
 WORKDIR /src
 
@@ -8,8 +8,8 @@ ENV \
   CUE_VERSION=v0.4.2 \
   HOF_VERSION=0.6.1 \
   STRONGBOX_VERSION=1.0.0 \
-  KUBECTL_VERSION=v1.21.0 \
-  KUSTOMIZE_VERSION=v4.4.1
+  KUBECTL_VERSION=v1.24.2 \
+  KUSTOMIZE_VERSION=v4.5.5
 
 RUN os=$(go env GOOS) && arch=$(go env GOARCH) \
   && curl -Ls https://github.com/cue-lang/cue/releases/download/${CUE_VERSION}/cue_${CUE_VERSION}_${os}_${arch}.tar.gz \
@@ -34,7 +34,7 @@ RUN go get -t ./... \
   && make test \
   && CGO_ENABLED=0 && go build -o /kube-applier .
 
-FROM alpine:3.15
+FROM alpine:3.16
 RUN apk --no-cache add git openssh-client tini
 COPY templates/ /templates/
 COPY static/ /static/
