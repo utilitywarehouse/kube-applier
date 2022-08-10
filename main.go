@@ -97,17 +97,23 @@ func main() {
 
 	clock := &sysutil.Clock{}
 
-	oidcAuthenticator, err := oidc.NewAuthenticator(
-		*fOidcIssuer,
-		*fOidcClientID,
-		*fOidcClientSecret,
-		*fOidcCallbackURL,
+	var (
+		oidcAuthenticator *oidc.Authenticator
+		err               error
 	)
-	if err != nil {
-		log.Logger("kube-applier").Error("could not setup oidc authenticator", "error", err)
-		os.Exit(1)
+	if strings.Join([]string{*fOidcIssuer, *fOidcClientID, *fOidcClientSecret, *fOidcCallbackURL}, "") != "" {
+		oidcAuthenticator, err = oidc.NewAuthenticator(
+			*fOidcIssuer,
+			*fOidcClientID,
+			*fOidcClientSecret,
+			*fOidcCallbackURL,
+		)
+		if err != nil {
+			log.Logger("kube-applier").Error("could not setup oidc authenticator", "error", err)
+			os.Exit(1)
+		}
+		log.Logger("kube-applier").Info("OIDC authentication configured", "issuer", *fOidcIssuer, "clientID", *fOidcClientID)
 	}
-	log.Logger("kube-applier").Info("OIDC authentication configured", "issuer", *fOidcIssuer, "clientID", *fOidcClientID)
 
 	repo, err := git.NewRepository(
 		*fRepoDest,
