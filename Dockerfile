@@ -1,4 +1,4 @@
-FROM golang:1.18-alpine AS build
+FROM golang:1.19-alpine AS build
 
 WORKDIR /src
 
@@ -8,7 +8,7 @@ ENV \
   CUE_VERSION=v0.4.2 \
   HOF_VERSION=0.6.1 \
   STRONGBOX_VERSION=1.0.0 \
-  KUBECTL_VERSION=v1.24.2 \
+  KUBECTL_VERSION=v1.24.4 \
   KUSTOMIZE_VERSION=v4.5.5
 
 RUN os=$(go env GOOS) && arch=$(go env GOARCH) \
