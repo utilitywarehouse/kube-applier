@@ -7,10 +7,8 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -103,16 +101,6 @@ func NewClient(host, label, kubeCtlPath string, kubeCtlOpts []string) *Client {
 	}
 }
 
-func detectCue(path string) bool {
-	files, _ := ioutil.ReadDir(path)
-	for _, file := range files {
-		if filepath.Ext(file.Name()) == ".cue" {
-			return true
-		}
-	}
-	return false
-}
-
 // Apply attempts to "kubectl apply" the files located at path. It returns the
 // full apply command and its output.
 func (c *Client) Apply(ctx context.Context, path string, options ApplyOptions) (string, string, error) {
@@ -124,11 +112,8 @@ func (c *Client) Apply(ctx context.Context, path string, options ApplyOptions) (
 	} else if _, err := os.Stat(path + "/Kustomization"); err == nil {
 		kustomize = true
 	}
-
-	cue := detectCue(path)
-
-	if kustomize || cue {
-		cmd, out, err := c.applyFromBuilders(ctx, path, options, kustomize, cue)
+	if kustomize {
+		cmd, out, err := c.applyKustomize(ctx, path, options)
 		return sanitiseCmdStr(cmd), out, err
 	}
 	cmd, out, err := c.applyPath(ctx, path, options)
@@ -158,86 +143,34 @@ func (c *Client) applyPath(ctx context.Context, path string, options ApplyOption
 	return cmdStr, out, nil
 }
 
-// applyFromBuilders runs kustomize and cue on the path, merges the resulting manifests and pipes them to `kubectl apply -f -`
-func (c *Client) applyFromBuilders(ctx context.Context, path string, options ApplyOptions, kustomize, cue bool) (string, string, error) {
-	var kustomizeBytes, cueBytes []byte
-	var cmdStr, kustomizeCmdStr, cueCmdStr string
+// applyKustomize does a `kustomize build | kubectl apply -f -` on the path
+func (c *Client) applyKustomize(ctx context.Context, path string, options ApplyOptions) (string, string, error) {
+	var kustomizeStdout, kustomizeStderr bytes.Buffer
 
-	if kustomize {
-		var kustomizeStdout, kustomizeStderr bytes.Buffer
+	kustomizeCmd := exec.CommandContext(ctx, "kustomize", "build", path)
+	options.setCommandEnvironment(kustomizeCmd)
+	kustomizeCmd.Stdout = &kustomizeStdout
+	kustomizeCmd.Stderr = &kustomizeStderr
 
-		kustomizeCmd := exec.CommandContext(ctx, "kustomize", "build", path)
-		options.setCommandEnvironment(kustomizeCmd)
-		kustomizeCmd.Stdout = &kustomizeStdout
-		kustomizeCmd.Stderr = &kustomizeStderr
-
-		err := kustomizeCmd.Run()
-		if err != nil {
-			if ctx.Err() == context.DeadlineExceeded {
-				err = errors.Wrap(ctx.Err(), err.Error())
-			}
-			return kustomizeCmd.String(), kustomizeStderr.String(), err
+	err := kustomizeCmd.Run()
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			err = errors.Wrap(ctx.Err(), err.Error())
 		}
-		kustomizeBytes = kustomizeStdout.Bytes()
-		kustomizeCmdStr = kustomizeCmd.String()
+		return kustomizeCmd.String(), kustomizeStderr.String(), err
 	}
-
-	if cue {
-		if _, err := os.Stat(path + "/cue.mods"); err == nil {
-			var hofStdout, hofStderr bytes.Buffer
-			hofCmd := exec.CommandContext(ctx, "hof", "mod", "vendor", "cue")
-			hofCmd.Dir = path
-			options.setCommandEnvironment(hofCmd)
-			hofCmd.Stdout = &hofStdout
-			hofCmd.Stderr = &hofStderr
-
-			err := hofCmd.Run()
-			if err != nil {
-				if ctx.Err() == context.DeadlineExceeded {
-					err = errors.Wrap(ctx.Err(), err.Error())
-				}
-				return hofCmd.String(), hofStderr.String(), err
-			}
-		}
-
-		var cueStdout, cueStderr bytes.Buffer
-
-		cueCmd := exec.CommandContext(ctx, "cue", "build", ".")
-		cueCmd.Dir = path
-		options.setCommandEnvironment(cueCmd)
-		cueCmd.Stdout = &cueStdout
-		cueCmd.Stderr = &cueStderr
-
-		err := cueCmd.Run()
-		if err != nil {
-			if ctx.Err() == context.DeadlineExceeded {
-				err = errors.Wrap(ctx.Err(), err.Error())
-			}
-			return cueCmd.String(), cueStderr.String(), err
-		}
-		cueBytes = cueStdout.Bytes()
-		cueCmdStr = cueCmd.String() + " @ " + path
-	}
-
-	if kustomize && cue {
-		cmdStr = "(`" + kustomizeCmdStr + "` + `" + cueCmdStr + "`)"
-	} else if kustomize {
-		cmdStr = kustomizeCmdStr
-	} else {
-		cmdStr = cueCmdStr
-	}
-
-	// Combine cue and kustomize
-	stdout := append(kustomizeBytes, []byte("\n---\n")...)
-	stdout = append(stdout, cueBytes...)
 
 	// Split the stdout into secrets and other resources
+	stdout, err := io.ReadAll(&kustomizeStdout)
+	if err != nil {
+		return kustomizeCmd.String(), "error reading kustomize output", err
+	}
 	resources, secrets, err := splitSecrets(stdout)
 	if err != nil {
-		return cmdStr, "error extracting secrets from builders output", err
+		return kustomizeCmd.String(), "error extracting secrets from kustomize output", err
 	}
 	if len(resources) == 0 && len(secrets) == 0 {
-		return cmdStr, "", fmt.Errorf("No resources were extracted from the builders output")
+		return kustomizeCmd.String(), "", fmt.Errorf("No resources were extracted from the kustomize output")
 	}
 
 	// This is the command we are effectively applying. In actuality we're splitting it into two
@@ -252,7 +185,7 @@ func (c *Client) applyFromBuilders(ctx context.Context, path string, options App
 	// Add opts that are specific to this client
 	displayArgs = append(c.KubeCtlOpts, displayArgs...)
 	kubectlCmd := exec.Command(c.KubeCtlPath, displayArgs...)
-	cmdStr = cmdStr + " | " + kubectlCmd.String()
+	cmdStr := kustomizeCmd.String() + " | " + kubectlCmd.String()
 
 	var kubectlOut string
 
