@@ -112,14 +112,8 @@ func (c *Client) Apply(ctx context.Context, path string, options ApplyOptions) (
 	} else if _, err := os.Stat(path + "/Kustomization"); err == nil {
 		kustomize = true
 	}
-
-	var cue bool
-	if _, err := os.Stat(path + "/kube_tool.cue"); err == nil {
-		cue = true
-	}
-
-	if kustomize || cue {
-		cmd, out, err := c.applyFromBuilders(ctx, path, options, kustomize, cue)
+	if kustomize {
+		cmd, out, err := c.applyKustomize(ctx, path, options)
 		return sanitiseCmdStr(cmd), out, err
 	}
 	cmd, out, err := c.applyPath(ctx, path, options)
@@ -149,66 +143,34 @@ func (c *Client) applyPath(ctx context.Context, path string, options ApplyOption
 	return cmdStr, out, nil
 }
 
-// applyFromBuilders runs kustomize and cue on the path, merges the resulting manifests and pipes them to `kubectl apply -f -`
-func (c *Client) applyFromBuilders(ctx context.Context, path string, options ApplyOptions, kustomize, cue bool) (string, string, error) {
-	var kustomizeBytes, cueBytes []byte
-	cmdStr := ""
+// applyKustomize does a `kustomize build | kubectl apply -f -` on the path
+func (c *Client) applyKustomize(ctx context.Context, path string, options ApplyOptions) (string, string, error) {
+	var kustomizeStdout, kustomizeStderr bytes.Buffer
 
-	if kustomize {
-		var kustomizeStdout, kustomizeStderr bytes.Buffer
+	kustomizeCmd := exec.CommandContext(ctx, "kustomize", "build", path)
+	options.setCommandEnvironment(kustomizeCmd)
+	kustomizeCmd.Stdout = &kustomizeStdout
+	kustomizeCmd.Stderr = &kustomizeStderr
 
-		kustomizeCmd := exec.CommandContext(ctx, "kustomize", "build", path)
-		options.setCommandEnvironment(kustomizeCmd)
-		kustomizeCmd.Stdout = &kustomizeStdout
-		kustomizeCmd.Stderr = &kustomizeStderr
-
-		err := kustomizeCmd.Run()
-		if err != nil {
-			if ctx.Err() == context.DeadlineExceeded {
-				err = errors.Wrap(ctx.Err(), err.Error())
-			}
-			return kustomizeCmd.String(), kustomizeStderr.String(), err
+	err := kustomizeCmd.Run()
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			err = errors.Wrap(ctx.Err(), err.Error())
 		}
-		kustomizeBytes = kustomizeStdout.Bytes()
-		cmdStr = kustomizeCmd.String()
+		return kustomizeCmd.String(), kustomizeStderr.String(), err
 	}
-
-	if cue {
-		var cueStdout, cueStderr bytes.Buffer
-
-		cueCmd := exec.CommandContext(ctx, "cue", "build", ".")
-		cueCmd.Dir = path
-		options.setCommandEnvironment(cueCmd)
-		cueCmd.Stdout = &cueStdout
-		cueCmd.Stderr = &cueStderr
-
-		err := cueCmd.Run()
-		if err != nil {
-			if ctx.Err() == context.DeadlineExceeded {
-				err = errors.Wrap(ctx.Err(), err.Error())
-			}
-			return cueCmd.String(), cueStderr.String(), err
-		}
-		cueBytes = cueStdout.Bytes()
-
-		if kustomize {
-			cmdStr = "(`" + cmdStr + "` + `" + cueCmd.String() + "` @ " + path + ")"
-		} else {
-			cmdStr = cueCmd.String() + " @ " + path
-		}
-	}
-
-	// Combine cue and kustomize
-	stdout := append(kustomizeBytes, []byte("\n---\n")...)
-	stdout = append(stdout, cueBytes...)
 
 	// Split the stdout into secrets and other resources
+	stdout, err := io.ReadAll(&kustomizeStdout)
+	if err != nil {
+		return kustomizeCmd.String(), "error reading kustomize output", err
+	}
 	resources, secrets, err := splitSecrets(stdout)
 	if err != nil {
-		return cmdStr, "error extracting secrets from builders output", err
+		return kustomizeCmd.String(), "error extracting secrets from kustomize output", err
 	}
 	if len(resources) == 0 && len(secrets) == 0 {
-		return cmdStr, "", fmt.Errorf("No resources were extracted from the builders output")
+		return kustomizeCmd.String(), "", fmt.Errorf("No resources were extracted from the kustomize output")
 	}
 
 	// This is the command we are effectively applying. In actuality we're splitting it into two
@@ -223,7 +185,7 @@ func (c *Client) applyFromBuilders(ctx context.Context, path string, options App
 	// Add opts that are specific to this client
 	displayArgs = append(c.KubeCtlOpts, displayArgs...)
 	kubectlCmd := exec.Command(c.KubeCtlPath, displayArgs...)
-	cmdStr = cmdStr + " | " + kubectlCmd.String()
+	cmdStr := kustomizeCmd.String() + " | " + kubectlCmd.String()
 
 	var kubectlOut string
 
