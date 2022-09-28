@@ -7,10 +7,8 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -103,16 +101,6 @@ func NewClient(host, label, kubeCtlPath string, kubeCtlOpts []string) *Client {
 	}
 }
 
-func detectCue(path string) bool {
-	files, _ := ioutil.ReadDir(path)
-	for _, file := range files {
-		if filepath.Ext(file.Name()) == ".cue" {
-			return true
-		}
-	}
-	return false
-}
-
 // Apply attempts to "kubectl apply" the files located at path. It returns the
 // full apply command and its output.
 func (c *Client) Apply(ctx context.Context, path string, options ApplyOptions) (string, string, error) {
@@ -125,7 +113,10 @@ func (c *Client) Apply(ctx context.Context, path string, options ApplyOptions) (
 		kustomize = true
 	}
 
-	cue := detectCue(path)
+	var cue bool
+	if _, err := os.Stat(path + "/kube_tool.cue"); err == nil {
+		cue = true
+	}
 
 	if kustomize || cue {
 		cmd, out, err := c.applyFromBuilders(ctx, path, options, kustomize, cue)
