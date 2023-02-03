@@ -1,13 +1,13 @@
-FROM golang:1.19-alpine AS build
+FROM golang:1.20-alpine AS build
 
 WORKDIR /src
 
 RUN apk --no-cache add git gcc make musl-dev curl bash openssh-client
 
 ENV \
-  STRONGBOX_VERSION=1.0.0 \
-  KUBECTL_VERSION=v1.24.4 \
-  KUSTOMIZE_VERSION=v4.5.5
+  KUBECTL_VERSION=v1.26.1 \
+  KUSTOMIZE_VERSION=v5.0.0 \
+  STRONGBOX_VERSION=1.1.0
 
 RUN os=$(go env GOOS) && arch=$(go env GOARCH) \
   && curl -Ls -o /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/${os}/${arch}/kubectl \
@@ -27,7 +27,7 @@ RUN go get -t ./... \
   && make test \
   && CGO_ENABLED=0 && go build -o /kube-applier .
 
-FROM alpine:3.16
+FROM alpine:3.17
 RUN apk --no-cache add git openssh-client tini
 COPY templates/ /templates/
 COPY static/ /static/
