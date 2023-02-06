@@ -228,7 +228,7 @@ func (c *Client) UpdateWaybill(ctx context.Context, waybill *kubeapplierv1alpha1
 // UpdateWaybillStatus updates the status of the Waybill resource
 // provided.
 func (c *Client) UpdateWaybillStatus(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill) error {
-	return c.GetClient().Status().Update(ctx, waybill, defaultUpdateOptions)
+	return c.GetClient().SubResource("status").Update(ctx, waybill, &client.SubResourceUpdateOptions{UpdateOptions: *defaultUpdateOptions})
 }
 
 // GetSecret returns the Secret resource specified by the namespace and name.
