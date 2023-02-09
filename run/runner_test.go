@@ -215,7 +215,7 @@ deployment.apps/test-deployment created
 					ErrorMessage: "exit status 1",
 					Finished:     metav1.Time{},
 					Output: `namespace/app-b configured
-error: error validating "testdata/manifests/app-b/deployment.yaml": error validating data: ValidationError(Deployment.spec.template.spec): missing required field "containers" in io.k8s.api.core.v1.PodSpec; if you choose to ignore these errors, turn validation off with --validate=false
+The Deployment "test-deployment" is invalid: spec.template.spec.containers: Required value
 `,
 					Started: metav1.Time{},
 					Success: false,
@@ -1028,7 +1028,7 @@ func matchWaybill(expected kubeapplierv1alpha1.Waybill, kubectlPath, kustomizePa
 				commandExtraArgs += " --dry-run=none"
 			}
 			if pointer.BoolPtrDerefOr(expected.Spec.Prune, true) {
-				commandExtraArgs += fmt.Sprintf(" --prune --all --prune-whitelist=%s", strings.Join(pruneWhitelist, " --prune-whitelist="))
+				commandExtraArgs += fmt.Sprintf(" --prune --all --prune-allowlist=%s", strings.Join(pruneWhitelist, " --prune-allowlist="))
 			}
 			repositoryPath := expected.Spec.RepositoryPath
 			if repositoryPath == "" {

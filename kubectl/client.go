@@ -68,7 +68,7 @@ func (o *ApplyOptions) Args() []string {
 	if len(o.PruneWhitelist) > 0 {
 		args = append(args, []string{"--prune", "--all"}...)
 		for _, w := range o.PruneWhitelist {
-			args = append(args, "--prune-whitelist="+w)
+			args = append(args, "--prune-allowlist="+w)
 		}
 	}
 

@@ -28,10 +28,10 @@ generate: controller-gen-install
 # Make sure controller-gen is installed. This should build and install packages
 # in module-aware mode, ignoring any local go.mod file
 controller-gen-install:
-	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.3
 
 KUBEBUILDER_BINDIR=$${PWD}/kubebuilder-bindir
-KUBEBUILDER_VERSION="1.23.x"
+KUBEBUILDER_VERSION="1.26.x"
 test:
 	command -v setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 	mkdir -p $(KUBEBUILDER_BINDIR)

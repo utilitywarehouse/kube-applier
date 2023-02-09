@@ -93,7 +93,7 @@ func (o *ApplyOptions) pruneWhitelist(waybill *kubeapplierv1alpha1.Waybill, prun
 			pruneWhitelist = append(pruneWhitelist, o.ClusterResources...)
 		}
 
-		// Trim blacklisted items out of the whitelist
+		// Trim blacklisted items out of the allowlist
 		pruneBlacklist := uniqueStrings(append(pruneBlacklist, waybill.Spec.PruneBlacklist...))
 		for _, b := range pruneBlacklist {
 			for i, w := range pruneWhitelist {
