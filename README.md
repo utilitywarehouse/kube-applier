@@ -226,7 +226,7 @@ It's important to note that kube-applier uses a
 to establish which resources it has permissions to prune. This may not work
 reliably if you aren't using the RBAC
 [authorization module](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#authorization-modules).
-In which case, the prune whitelist may be empty or incomplete.
+In which case, the prune allowlist may be empty or incomplete.
 
 ## Deploying
 

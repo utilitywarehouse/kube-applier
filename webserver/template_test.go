@@ -56,7 +56,7 @@ func Test_ExecuteTemplate(t *testing.T) {
 			Spec: kubeapplierv1alpha1.WaybillSpec{DryRun: true},
 			Status: kubeapplierv1alpha1.WaybillStatus{
 				LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-					Command:      "/usr/local/bin/kustomize build /tmp/run_biz_main_repo_2305192794/dev/biz | /usr/local/bin/kubectl apply -f - --token=<omitted> -n biz --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged",
+					Command:      "/usr/local/bin/kustomize build /tmp/run_biz_main_repo_2305192794/dev/biz | /usr/local/bin/kubectl apply -f - --token=<omitted> -n biz --dry-run=none --prune --all --prune-allowlist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged",
 					Commit:       "22c815614b",
 					ErrorMessage: `exit status 1`,
 					Started:      metav1.Time{Time: fixedTime.Add(-time.Minute)},
@@ -99,7 +99,7 @@ secret/kube-applier-delegate-token unchanged (server dry run)
 			},
 			Status: kubeapplierv1alpha1.WaybillStatus{
 				LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-					Command:      "/usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/zoo | /usr/local/bin/kubectl apply -f - --token=<omitted> -n zoo --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged",
+					Command:      "/usr/local/bin/kustomize build /tmp/run_zoo_main_repo_2305192794/dev/zoo | /usr/local/bin/kubectl apply -f - --token=<omitted> -n zoo --dry-run=none --prune --all --prune-allowlist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged",
 					Commit:       "22c815614b",
 					ErrorMessage: `exit status 1`,
 					Started:      metav1.Time{Time: fixedTime.Add(-time.Minute)},
@@ -135,7 +135,7 @@ unable to recognize "STDIN": no matches for kind "Ingress" in version "extension
 			},
 			Status: kubeapplierv1alpha1.WaybillStatus{
 				LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-					Command:  "/usr/local/bin/kustomize build /tmp/run_buz_main_repo_2305192794/dev/buz | /usr/local/bin/kubectl apply -f - --token=<omitted> -n buz --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged",
+					Command:  "/usr/local/bin/kustomize build /tmp/run_buz_main_repo_2305192794/dev/buz | /usr/local/bin/kubectl apply -f - --token=<omitted> -n buz --dry-run=none --prune --all --prune-allowlist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged",
 					Commit:   "22c815614b",
 					Started:  metav1.Time{Time: fixedTime.Add(-time.Minute)},
 					Finished: metav1.Time{Time: fixedTime},
@@ -166,7 +166,7 @@ networkpolicy.networking.k8s.io/default unchanged
 			},
 			Status: kubeapplierv1alpha1.WaybillStatus{
 				LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-					Command:  "/usr/local/bin/kustomize build /tmp/run_eng_main_repo_2305192794/dev/eng | /usr/local/bin/kubectl apply -f - --token=<omitted> -n eng --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged",
+					Command:  "/usr/local/bin/kustomize build /tmp/run_eng_main_repo_2305192794/dev/eng | /usr/local/bin/kubectl apply -f - --token=<omitted> -n eng --dry-run=none --prune --all --prune-allowlist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged",
 					Commit:   "22c815614b",
 					Started:  metav1.Time{Time: fixedTime.Add(-time.Minute)},
 					Finished: metav1.Time{Time: fixedTime},
@@ -189,7 +189,7 @@ networkpolicy.networking.k8s.io/default unchanged
 			},
 			Status: kubeapplierv1alpha1.WaybillStatus{
 				LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-					Command:  "/usr/local/bin/kustomize build /tmp/run_fuz_main_repo_2305192794/dev/fuz | /usr/local/bin/kubectl apply -f - --token=<omitted> -n fuz --dry-run=none --prune --all --prune-whitelist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged",
+					Command:  "/usr/local/bin/kustomize build /tmp/run_fuz_main_repo_2305192794/dev/fuz | /usr/local/bin/kubectl apply -f - --token=<omitted> -n fuz --dry-run=none --prune --all --prune-allowlist=core/v1/ConfigMap serviceaccount/job-trigger unchanged serviceaccount/kube-applier-delegate unchanged",
 					Commit:   "22c815614b",
 					Started:  metav1.Time{Time: fixedTime.Add(-time.Minute)},
 					Finished: metav1.Time{Time: fixedTime},
