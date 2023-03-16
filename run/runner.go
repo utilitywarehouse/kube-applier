@@ -52,7 +52,7 @@ const (
 
 var (
 	reKeyName     = regexp.MustCompile(`#\skube-applier:\skey_(\w+)`)
-	reRepoAddress = regexp.MustCompile(`(^\s*-\s*ssh:\/\/)(github)\.(com)(.*$)`)
+	reRepoAddress = regexp.MustCompile(`(?P<prefix>^\s*-\s*(?:ssh:\/\/))(?P<user>\w.+?@)?(?P<domain>\w.+?)(?P<repoDetails>[\/:].*$)`)
 )
 
 // Checks whether the provided Secret can be used by the Waybill and returns an
