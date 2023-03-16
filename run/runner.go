@@ -52,7 +52,7 @@ const (
 
 var (
 	reKeyName     = regexp.MustCompile(`#\skube-applier:\skey_(\w+)`)
-	reRepoAddress = regexp.MustCompile(`(?P<prefix>^\s*-\s*(?:ssh:\/\/))(?P<user>\w.+?@)?(?P<domain>\w.+?)(?P<repoDetails>[\/:].*$)`)
+	reRepoAddress = regexp.MustCompile(`(?P<prefix>^\s*-\s*(?:ssh:\/\/))(?P<user>\w.+?@)?(?P<domainName>github)\.(?P<domainSuffix>com)(?P<repoDetails>[\/:].*$)`)
 )
 
 // Checks whether the provided Secret can be used by the Waybill and returns an
@@ -395,7 +395,7 @@ func (r *Runner) updateRepoBaseAddresses(tmpRepoDir string) error {
 			l := scanner.Bytes()
 			if keyName != "" {
 				if reRepoAddress.Match(l) {
-					l = reRepoAddress.ReplaceAll(l, []byte(fmt.Sprintf("${1}%s_${2}_${3}${4}", keyName)))
+					l = reRepoAddress.ReplaceAll(l, []byte(fmt.Sprintf("${prefix}${user}%s_${domainName}_${domainSuffix}${repoDetails}", keyName)))
 				}
 				keyName = ""
 			} else if reKeyName.Match(l) {
