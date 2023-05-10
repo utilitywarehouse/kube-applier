@@ -80,6 +80,11 @@ spec:
                 description: AutoApply determines whether this Waybill will be automatically
                   applied by scheduled or polling runs.
                 type: boolean
+              autoTest:
+                default: true
+                description: AutoTest determines whether this Waybill will be automatically
+                  applied by scheduled or polling runs.
+                type: boolean
               delegateServiceAccountSecretRef:
                 default: kube-applier-delegate-token
                 description: DelegateServiceAccountSecretRef references a Secret of
