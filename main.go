@@ -168,6 +168,7 @@ func main() {
 		PruneBlacklist: pruneBlacklistSlice,
 		Repository:     repo,
 		RepoPath:       *fRepoPath,
+		Strongbox:      &run.Strongboxer{},
 		WorkerCount:    *fWorkerCount,
 	}
 

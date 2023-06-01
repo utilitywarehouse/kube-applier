@@ -131,6 +131,7 @@ type Runner struct {
 	PruneBlacklist []string
 	RepoPath       string
 	Repository     *git.Repository
+	Strongbox      StrongboxInterface
 	WorkerCount    int
 	workerGroup    *sync.WaitGroup
 	workerQueue    chan Request
@@ -210,7 +211,13 @@ func (r *Runner) processRequest(request Request) error {
 	if err != nil {
 		return fmt.Errorf("failed setting up repository clone: %w", err)
 	}
-
+	// We need to setup a .gitconfig for strongbox under the temp home dir
+	// in order to be available when we invoke git via running kustomize.
+	// That way we should also be able to decrypt files cloned from remote
+	// bases on kustomize build.
+	if err := r.Strongbox.SetupGitConfigForStrongbox(ctx, request.Waybill, tmpHomeDir); err != nil {
+		return err
+	}
 	r.apply(ctx, tmpRepoPath, delegateToken, request.Waybill, applyOptions)
 
 	request.Waybill.Status.LastRun.Commit = hash
@@ -321,33 +328,8 @@ func (r *Runner) setupTempDirs(waybill *kubeapplierv1alpha1.Waybill) (string, st
 	return tmpHomeDir, tmpRepoDir, func() { os.RemoveAll(tmpHomeDir); os.RemoveAll(tmpRepoDir) }, nil
 }
 
-func (r *Runner) setupStrongboxKeyring(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, tmpHomeDir string) error {
-	if waybill.Spec.StrongboxKeyringSecretRef == nil {
-		return nil
-	}
-	sbNamespace := waybill.Spec.StrongboxKeyringSecretRef.Namespace
-	if sbNamespace == "" {
-		sbNamespace = waybill.Namespace
-	}
-	secret, err := r.KubeClient.GetSecret(ctx, sbNamespace, waybill.Spec.StrongboxKeyringSecretRef.Name)
-	if err != nil {
-		return err
-	}
-	if err := checkSecretIsAllowed(waybill, secret); err != nil {
-		return err
-	}
-	strongboxData, ok := secret.Data[".strongbox_keyring"]
-	if !ok {
-		return fmt.Errorf(`secret "%s/%s" does not contain key '.strongbox_keyring'`, secret.Namespace, secret.Name)
-	}
-	if err := os.WriteFile(filepath.Join(tmpHomeDir, ".strongbox_keyring"), strongboxData, 0400); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (r *Runner) setupRepositoryClone(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, tmpHomeDir, tmpRepoDir string) (string, string, error) {
-	if err := r.setupStrongboxKeyring(ctx, waybill, tmpHomeDir); err != nil {
+	if err := r.Strongbox.SetupStrongboxKeyring(ctx, r.KubeClient, waybill, tmpHomeDir); err != nil {
 		return "", "", err
 	}
 	repositoryPath := waybill.Spec.RepositoryPath
@@ -355,6 +337,7 @@ func (r *Runner) setupRepositoryClone(ctx context.Context, waybill *kubeapplierv
 		repositoryPath = waybill.Namespace
 	}
 	subpath := filepath.Join(r.RepoPath, repositoryPath)
+	// Point strongbox home to the temporary home to be able to decrypt files based on waybill cnfiguratn
 	hash, err := r.Repository.CloneLocal(ctx, []string{fmt.Sprintf("STRONGBOX_HOME=%s", tmpHomeDir)}, tmpRepoDir, subpath)
 	if err != nil {
 		return "", "", err

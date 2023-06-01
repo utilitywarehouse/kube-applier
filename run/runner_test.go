@@ -115,6 +115,7 @@ var _ = Describe("Runner", func() {
 			PruneBlacklist: []string{"apps/v1/ControllerRevision"},
 			Repository:     repo,
 			RepoPath:       "testdata/manifests",
+			Strongbox:      &mockStrongboxer{},
 			WorkerCount:    1, // limit to one to prevent race issues
 		}
 
