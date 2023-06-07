@@ -215,7 +215,8 @@ func (r *Runner) processRequest(request Request) error {
 	// in order to be available when we invoke git via running kustomize.
 	// That way we should also be able to decrypt files cloned from remote
 	// bases on kustomize build.
-	if err := r.Strongbox.SetupGitConfigForStrongbox(ctx, request.Waybill, tmpHomeDir); err != nil {
+	applyOptions.EnvironmentVariables = append(applyOptions.EnvironmentVariables, fmt.Sprintf("STRONGBOX_HOME=%s", tmpHomeDir))
+	if err := r.Strongbox.SetupGitConfigForStrongbox(ctx, request.Waybill, applyOptions.EnvironmentVariables); err != nil {
 		return err
 	}
 	r.apply(ctx, tmpRepoPath, delegateToken, request.Waybill, applyOptions)

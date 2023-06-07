@@ -13,7 +13,7 @@ import (
 
 // strongboxInterface holds functions to configure strongbox for waybill runs
 type StrongboxInterface interface {
-	SetupGitConfigForStrongbox(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, homeDir string) error
+	SetupGitConfigForStrongbox(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, env []string) error
 	SetupStrongboxKeyring(ctx context.Context, kubeClient *client.Client, waybill *kubeapplierv1alpha1.Waybill, homeDir string) error
 }
 
@@ -48,20 +48,14 @@ type Strongboxer struct {
 	strongboxBase
 }
 
-func (s *Strongboxer) SetupGitConfigForStrongbox(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, homeDir string) error {
+func (s *Strongboxer) SetupGitConfigForStrongbox(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, env []string) error {
 	if waybill.Spec.StrongboxKeyringSecretRef == nil {
 		return nil
 	}
 
 	cmd := exec.CommandContext(ctx, "strongbox", "-git-config")
-	cmd.Dir = homeDir
-	// Set PATH so we can find strongbox bin and HOME and STRONGBOX_HOME to
-	// point to homeDir
-	cmd.Env = []string{
-		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
-		fmt.Sprintf("HOME=%s", homeDir),
-		fmt.Sprintf("STRONGBOX_HOME=%s", homeDir),
-	}
+	// Set PATH so we can find strongbox bin
+	cmd.Env = append(env, fmt.Sprintf("PATH=%s", os.Getenv("PATH")))
 	stderr, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("error running strongbox err:%s %w ", stderr, err)
@@ -75,6 +69,6 @@ type mockStrongboxer struct {
 	strongboxBase
 }
 
-func (m *mockStrongboxer) SetupGitConfigForStrongbox(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, homeDir string) error {
+func (m *mockStrongboxer) SetupGitConfigForStrongbox(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, env []string) error {
 	return nil
 }
