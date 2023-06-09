@@ -134,12 +134,13 @@ func (r *Repository) syncLoop() {
 	for {
 		select {
 		case <-ticker.C:
+			start := time.Now()
 			ctx, cancel := context.WithTimeout(context.Background(), r.syncOptions.Interval-time.Second)
 			err := r.sync(ctx)
 			if err != nil {
 				log.Logger("repository").Error("could not sync git repository", "error", err)
 			}
-			metrics.RecordGitSync(err == nil)
+			metrics.RecordGitSync(err == nil, start)
 			cancel()
 		case <-r.stop:
 			return
