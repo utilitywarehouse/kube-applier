@@ -42,6 +42,8 @@ var (
 	gitLastSyncTimestamp prometheus.Gauge
 	// gitSyncCount is a Counter vector of git sync operations
 	gitSyncCount *prometheus.CounterVec
+	// gitSyncLatency is a Histogram vector that keeps track of git repo sync durations
+	gitSyncLatency *prometheus.HistogramVec
 	// kubectlExitCodeCount is a Counter vector of run exit codes
 	kubectlExitCodeCount *prometheus.CounterVec
 	// namespaceApplyCount is a Counter vector of runs success status
@@ -81,6 +83,17 @@ func init() {
 		Namespace: metricsNamespace,
 		Name:      "git_sync_count",
 		Help:      "Count of git sync operations",
+	},
+		[]string{
+			// Whether the apply was successful or not
+			"success",
+		},
+	)
+	gitSyncLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: metricsNamespace,
+		Name:      "git_sync_latency_seconds",
+		Help:      "Latency for git repo sync",
+		Buckets:   []float64{1, 5, 10, 20, 30, 60, 90, 120, 150, 300},
 	},
 		[]string{
 			// Whether the apply was successful or not
@@ -277,10 +290,13 @@ func ReconcileFromWaybillList(waybills []kubeapplierv1alpha1.Waybill) {
 
 // RecordGitSync records a git repository sync attempt by updating all the
 // relevant metrics
-func RecordGitSync(success bool) {
+func RecordGitSync(success bool, start time.Time) {
 	if success {
 		gitLastSyncTimestamp.Set(float64(time.Now().Unix()))
 	}
+	gitSyncLatency.With(prometheus.Labels{
+		"success": strconv.FormatBool(success),
+	}).Observe(time.Since(start).Seconds())
 	gitSyncCount.With(prometheus.Labels{
 		"success": strconv.FormatBool(success),
 	}).Inc()
