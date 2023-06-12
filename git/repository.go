@@ -62,7 +62,7 @@ func (so SyncOptions) gitSSHCommand() string {
 // GitPolling type runs for namespaces. The implementation borrows heavily from
 // git-sync.
 type Repository struct {
-	lock             sync.Mutex
+	lock             sync.RWMutex
 	path             string
 	repositoryConfig RepositoryConfig
 	running          bool
@@ -100,7 +100,7 @@ func NewRepository(path string, repositoryConfig RepositoryConfig, syncOptions S
 		path:             path,
 		repositoryConfig: repositoryConfig,
 		syncOptions:      syncOptions,
-		lock:             sync.Mutex{},
+		lock:             sync.RWMutex{},
 	}, nil
 }
 
@@ -323,8 +323,8 @@ func (r *Repository) cloneRemote(ctx context.Context) error {
 // disk and only checkouts the specified subpath. On success, it returns the
 // hash of the new repository clone's HEAD.
 func (r *Repository) CloneLocal(ctx context.Context, environment []string, dst, subpath string) (string, error) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+	r.lock.RLock()
+	defer r.lock.RUnlock()
 
 	hash, err := r.localHashForPath(ctx, subpath)
 	if err != nil {
@@ -346,16 +346,16 @@ func (r *Repository) CloneLocal(ctx context.Context, environment []string, dst, 
 // HashForPath returns the hash of the configured revision for the specified
 // path.
 func (r *Repository) HashForPath(ctx context.Context, path string) (string, error) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+	r.lock.RLock()
+	defer r.lock.RUnlock()
 	return r.localHashForPath(ctx, path)
 }
 
 // HasChangesForPath returns true if there are changes that have been committed
 // since the commit hash provided, under the specified path.
 func (r *Repository) HasChangesForPath(ctx context.Context, path, sinceHash string) (bool, error) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+	r.lock.RLock()
+	defer r.lock.RUnlock()
 
 	cmd := []string{"diff", "--quiet", sinceHash, r.repositoryConfig.Revision, "--", path}
 	_, err := r.runGitCommand(ctx, nil, r.path, cmd...)
