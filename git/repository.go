@@ -175,7 +175,7 @@ func (r *Repository) runGitCommand(ctx context.Context, environment []string, cw
 	if len(environment) > 0 {
 		cmd.Env = append(cmd.Env, environment...)
 	}
-
+	start := time.Now()
 	err := cmd.Run()
 	stdout := outbuf.String()
 	stderr := errbuf.String()
@@ -185,7 +185,7 @@ func (r *Repository) runGitCommand(ctx context.Context, environment []string, cw
 	if err != nil {
 		return "", fmt.Errorf("Run(%s): %w: { stdout: %q, stderr: %q }", cmdStr, err, stdout, stderr)
 	}
-	log.Logger("repository").Debug("command result", "stdout", stdout, "stderr", stderr)
+	log.Logger("repository").Debug("command result", "cmd", cmdStr, "exec_time", time.Since(start).Seconds(), "stdout", stdout, "stderr", stderr)
 
 	return stdout, nil
 }
