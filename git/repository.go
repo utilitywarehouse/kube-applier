@@ -230,13 +230,14 @@ func (r *Repository) remoteHash(ctx context.Context) (string, error) {
 }
 
 func (r *Repository) sync(ctx context.Context) error {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
 	gitRepoPath := filepath.Join(r.path, ".git")
 	_, err := os.Stat(gitRepoPath)
 	switch {
 	case os.IsNotExist(err):
+		// get write lock for initial sync
+		r.lock.Lock()
+		defer r.lock.Unlock()
+
 		// First time. Just clone it and get the hash.
 		err = r.cloneRemote(ctx)
 		if err != nil {
@@ -247,6 +248,7 @@ func (r *Repository) sync(ctx context.Context) error {
 		return fmt.Errorf("error checking if repo exists %q: %v", gitRepoPath, err)
 	default:
 		// Not the first time. Figure out if the ref has changed.
+		// Since this operation is read only no lock required
 		local, err := r.localHash(ctx)
 		if err != nil {
 			return err
@@ -261,6 +263,11 @@ func (r *Repository) sync(ctx context.Context) error {
 		}
 		log.Logger("repository").Info("update required", "rev", r.repositoryConfig.Revision, "local", local, "remote", remote)
 	}
+
+	// since this is the only function which acquires write lock and all other locks are Read only.
+	// Its safe to only lock when its actually required. ie after diff is detected and local update is required
+	r.lock.Lock()
+	defer r.lock.Unlock()
 
 	log.Logger("repository").Info("syncing git", "branch", r.repositoryConfig.Branch, "rev", r.repositoryConfig.Revision)
 	args := []string{"fetch", "-f", "--tags"}
