@@ -24,7 +24,7 @@ import (
 var (
 	fDiffURLFormat       = flag.String("diff-url-format", getStringEnv("DIFF_URL_FORMAT", ""), "Used to generate commit links in the status page")
 	fDryRun              = flag.Bool("dry-run", getBoolEnv("DRY_RUN", false), "Whether kube-applier operates in dry-run mode globally")
-	fGitPollWait         = flag.Duration("git-poll-wait", getDurationEnv("GIT_POLL_WAIT", time.Second*5), "How long kube-applier waits before checking for changes in the repository")
+	fGitPollWait         = flag.Duration("git-poll-wait", getDurationEnv("GIT_POLL_WAIT", time.Second*30), "How long kube-applier waits before checking for changes in the repository")
 	fGitKnownHostsPath   = flag.String("git-ssh-known-hosts-path", getStringEnv("GIT_KNOWN_HOSTS_PATH", ""), "Path to the known hosts file used for fetching the repository")
 	fGitSSHKeyPath       = flag.String("git-ssh-key-path", getStringEnv("GIT_SSH_KEY_PATH", ""), "Path to the SSH key file used for fetching the repository")
 	fListenPort          = flag.Int("listen-port", getIntEnv("LISTEN_PORT", 8080), "Port that the http server is listening on")
