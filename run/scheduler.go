@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -183,7 +184,12 @@ func (s *Scheduler) processGitChanges() {
 
 	hash, err := s.Repository.HashForPath(ctx, s.RepoPath)
 	if err != nil {
-		log.Logger("scheduler").Warn("Git polling could not get HEAD hash", "error", err)
+		// ignoring context timeout error because if we requests hash while
+		// repo sync is on going it can take up to a minute
+		if strings.Contains(err.Error(), "context deadline exceeded") {
+			return
+		}
+		log.Logger("scheduler").Error("Git polling could not get HEAD hash", "error", err)
 		return
 	}
 	// This check prevents the Scheduler from queueing multiple runs for
