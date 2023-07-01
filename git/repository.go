@@ -128,8 +128,13 @@ func (r *Repository) StartSync(ctx context.Context) error {
 func (r *Repository) syncLoop() {
 	r.stopped = make(chan bool)
 	defer close(r.stopped)
+
 	ticker := time.NewTicker(r.syncOptions.Interval)
 	defer ticker.Stop()
+
+	gcTicker := time.NewTicker(24 * time.Hour)
+	defer gcTicker.Stop()
+
 	log.Logger("repository").Info("started repository sync loop", "interval", r.syncOptions.Interval)
 	for {
 		select {
@@ -142,6 +147,15 @@ func (r *Repository) syncLoop() {
 			}
 			metrics.RecordGitSync(err == nil, start)
 			cancel()
+
+		case <-gcTicker.C:
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			err := r.gitCleanup(ctx)
+			if err != nil {
+				log.Logger("repository").Error("error cleaning repository", "error", err)
+			}
+			cancel()
+
 		case <-r.stop:
 			return
 		}
@@ -230,14 +244,13 @@ func (r *Repository) remoteHash(ctx context.Context) (string, error) {
 }
 
 func (r *Repository) sync(ctx context.Context) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
 	gitRepoPath := filepath.Join(r.path, ".git")
 	_, err := os.Stat(gitRepoPath)
 	switch {
 	case os.IsNotExist(err):
-		// get write lock for initial sync
-		r.lock.Lock()
-		defer r.lock.Unlock()
-
 		// First time. Just clone it and get the hash.
 		err = r.cloneRemote(ctx)
 		if err != nil {
@@ -264,11 +277,6 @@ func (r *Repository) sync(ctx context.Context) error {
 		log.Logger("repository").Info("update required", "rev", r.repositoryConfig.Revision, "local", local, "remote", remote)
 	}
 
-	// since this is the only function which acquires write lock and all other locks are Read only.
-	// Its safe to only lock when its actually required. ie after diff is detected and local update is required
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
 	log.Logger("repository").Info("syncing git", "branch", r.repositoryConfig.Branch, "rev", r.repositoryConfig.Revision)
 	args := []string{"fetch", "-f", "--tags"}
 	if r.repositoryConfig.Depth != 0 {
@@ -279,6 +287,19 @@ func (r *Repository) sync(ctx context.Context) error {
 	if _, err := r.runGitCommand(ctx, nil, r.path, args...); err != nil {
 		return err
 	}
+
+	// Reset HEAD
+	if _, err = r.runGitCommand(ctx, nil, r.path, "reset", "--soft", fmt.Sprintf("origin/%s", r.repositoryConfig.Branch)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *Repository) gitCleanup(ctx context.Context) error {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	gitRepoPath := filepath.Join(r.path, ".git")
 	// GC clone
 	if _, err := r.runGitCommand(ctx, nil, r.path, "gc", "--prune=all"); err != nil {
 		commitGraphLock := filepath.Join(gitRepoPath, "objects/info/commit-graph.lock")
@@ -289,10 +310,6 @@ func (r *Repository) sync(ctx context.Context) error {
 				log.Logger("repository").Error("possible git crash detected, commit graph lock removed and next attempt should succeed", "path", commitGraphLock)
 			}
 		}
-		return err
-	}
-	// Reset HEAD
-	if _, err = r.runGitCommand(ctx, nil, r.path, "reset", "--soft", fmt.Sprintf("origin/%s", r.repositoryConfig.Branch)); err != nil {
 		return err
 	}
 	return nil
