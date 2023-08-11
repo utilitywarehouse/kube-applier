@@ -305,6 +305,10 @@ the Prometheus default metrics, the following custom metrics are included:
   that reports the last time a run finished, expressed in seconds since the Unix
   Epoch and labelled with the namespace name.
 
+- **kube_applier_last_run_success** -  A
+  [Gauge](https://godoc.org/github.com/prometheus/client_golang/prometheus#Gauge)
+  that reports the results of the last run labelled with the namespace name.
+
 - **kube_applier_run_queue** - A
   [Gauge](https://godoc.org/github.com/prometheus/client_golang/prometheus#Gauge)
   that reports the number of runs that are currently queued, labelled with the
