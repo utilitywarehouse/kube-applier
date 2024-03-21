@@ -26,10 +26,12 @@ type WaybillSpec struct {
 	// +kubebuilder:default=false
 	DryRun bool `json:"dryRun,omitempty"`
 
-	// GitSSHSecretRef references a Secret that contains an item named `key` and
+	// GitSSHSecretRef will override the default Git SSH key passed as a
+	// flag. It references a Secret that contains an item named `key` and
 	// optionally an item named `known_hosts`. If present, these are passed to
 	// the apply runtime and are used by `kustomize` when cloning remote bases.
-	// This allows the use of bases from private repositories.
+	// This allows the use of bases from private repositories that the default
+	// key will not have access to.
 	// +optional
 	GitSSHSecretRef *ObjectReference `json:"gitSSHSecretRef,omitempty"`
 

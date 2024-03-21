@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -24,6 +26,30 @@ import (
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 	"github.com/utilitywarehouse/kube-applier/kubectl"
 	"github.com/utilitywarehouse/kube-applier/metrics"
+)
+
+// The ssh keys below are base64-encoded in order to work around
+// GitHub's notifications about committing a private key in a public
+// repo, which triggers for the deploy key. This key is a read-only
+// deploy key for a public repository and is safe to commit.
+var (
+	randomKey, _ = base64.StdEncoding.DecodeString(
+		`LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFB
+QUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhP
+UUFBQUNDbjArQUw1bzNDU1g3U2UwOTY5SUgvYWc4b2hlUkJkUXlwd1dXN1M0N1NMUUFBQUpBYVNL
+MmxHa2l0CnBRQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDQ24wK0FMNW8zQ1NYN1NlMDk2OUlIL2Fn
+OG9oZVJCZFF5cHdXVzdTNDdTTFEKQUFBRUJTMUpJNnhwa0lYN1JxK3Nnc1YyM2FrY1FBeGFDaUI4
+SjM3b0ZKVkViUHhLZlQ0QXZtamNKSmZ0SjdUM3IwZ2Y5cQpEeWlGNUVGMURLbkJaYnRManRJdEFB
+QUFER0ZzYTJGeVFHdDFhbWx5WVFFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`)
+
+	deployKey, _ = base64.StdEncoding.DecodeString(
+		`LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFB
+QUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhP
+UUFBQUNEMnlBVGFaZHZGOXFvQU9QWnkrejBSaHI3dm1IdVZ3WldvUkFwYjhuZ3hLQUFBQUpCMm1j
+VlZkcG5GClZRQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDRDJ5QVRhWmR2Rjlxb0FPUFp5K3owUmhy
+N3ZtSHVWd1pXb1JBcGI4bmd4S0EKQUFBRUI1VDBoKzNGV0J0M0xaZXpyL00rZzd5Q2NtaHFjYWRQ
+V0dTRjltUDh1L21mYklCTnBsMjhYMnFnQTQ5bkw3UFJHRwp2dStZZTVYQmxhaEVDbHZ5ZURFb0FB
+QUFER0ZzYTJGeVFHdDFhbWx5WVFFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`)
 )
 
 func TestApplyOptions_pruneWhitelist(t *testing.T) {
@@ -425,28 +451,6 @@ Some error output has been omitted because it may contain sensitive data
 
 			testEnsureWaybills(wbList)
 
-			// The ssh keys below are base64-encoded in order to work around
-			// GitHub's notifications about committing a private key in a public
-			// repo, which triggers for the deploy key. This key is a read-only
-			// deploy key for a public repository and is safe to commit.
-			randomKey, _ := base64.StdEncoding.DecodeString(
-				`LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFB
-QUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhP
-UUFBQUNDbjArQUw1bzNDU1g3U2UwOTY5SUgvYWc4b2hlUkJkUXlwd1dXN1M0N1NMUUFBQUpBYVNL
-MmxHa2l0CnBRQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDQ24wK0FMNW8zQ1NYN1NlMDk2OUlIL2Fn
-OG9oZVJCZFF5cHdXVzdTNDdTTFEKQUFBRUJTMUpJNnhwa0lYN1JxK3Nnc1YyM2FrY1FBeGFDaUI4
-SjM3b0ZKVkViUHhLZlQ0QXZtamNKSmZ0SjdUM3IwZ2Y5cQpEeWlGNUVGMURLbkJaYnRManRJdEFB
-QUFER0ZzYTJGeVFHdDFhbWx5WVFFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`)
-
-			deployKey, _ := base64.StdEncoding.DecodeString(
-				`LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFB
-QUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhP
-UUFBQUNEMnlBVGFaZHZGOXFvQU9QWnkrejBSaHI3dm1IdVZ3WldvUkFwYjhuZ3hLQUFBQUpCMm1j
-VlZkcG5GClZRQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDRDJ5QVRhWmR2Rjlxb0FPUFp5K3owUmhy
-N3ZtSHVWd1pXb1JBcGI4bmd4S0EKQUFBRUI1VDBoKzNGV0J0M0xaZXpyL00rZzd5Q2NtaHFjYWRQ
-V0dTRjltUDh1L21mYklCTnBsMjhYMnFnQTQ5bkw3UFJHRwp2dStZZTVYQmxhaEVDbHZ5ZURFb0FB
-QUFER0ZzYTJGeVFHdDFhbWx5WVFFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`)
-
 			Expect(k8sClient.GetClient().Create(context.TODO(), &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "git-ssh",
@@ -601,6 +605,68 @@ deployment.apps/test-deployment created
 				`kube_applier_namespace_apply_count{namespace="app-c-kustomize-withkey",success="true"} 1`,
 				`kube_applier_run_latency_seconds`,
 				`kube_applier_run_queue{namespace="[^"]+",type="Git polling run"} 0`,
+			})
+		})
+	})
+
+	Context("When operating on a Waybill that uses kustomize with no git secret it should fall back to KA ssh key", func() {
+		It("Should be able to build and apply", func() {
+			sshKey, err := ioutil.TempFile("", "testGitSSHKey")
+			if err != nil {
+				panic(err)
+			}
+			defer syscall.Unlink(sshKey.Name())
+			ioutil.WriteFile(sshKey.Name(), []byte(deployKey), 0700)
+			runner.DefaultGitSSHKeyPath = sshKey.Name()
+
+			waybill := kubeapplierv1alpha1.Waybill{
+				TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "app-d",
+					Namespace: "app-d-kustomize",
+				},
+				Spec: kubeapplierv1alpha1.WaybillSpec{
+					AutoApply: pointer.BoolPtr(true),
+					Prune:     pointer.BoolPtr(true),
+				},
+			}
+
+			testEnsureWaybills([]*kubeapplierv1alpha1.Waybill{&waybill})
+
+			repositoryPath := waybill.Spec.RepositoryPath
+			if repositoryPath == "" {
+				repositoryPath = waybill.Namespace
+			}
+			headCommitHash, err := runner.Repository.HashForPath(context.TODO(), filepath.Join(runner.RepoPath, repositoryPath))
+			Expect(err).To(BeNil())
+			expected := waybill
+			expected.Status = kubeapplierv1alpha1.WaybillStatus{
+				LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+					Command:      "",
+					Commit:       headCommitHash,
+					ErrorMessage: "",
+					Finished:     metav1.Time{},
+					Output: `namespace/app-d-kustomize configured
+deployment.apps/test-deployment created
+`,
+					Started: metav1.Time{},
+					Success: true,
+					Type:    PollingRun.String(),
+				},
+			}
+
+			Enqueue(runQueue, PollingRun, &waybill)
+			runner.Stop()
+
+			waybill.Status.LastRun.Output = testStripKubectlWarnings(waybill.Status.LastRun.Output)
+			Expect(waybill).Should(matchWaybill(expected, kubeCtlPath, kustomizePath, runner.RepoPath, applyOptions.pruneWhitelist(&waybill, runner.PruneBlacklist)))
+
+			testMetrics([]string{
+				`kube_applier_kubectl_exit_code_count{exit_code="0",namespace="app-d-kustomize"} 1`,
+				`kube_applier_last_run_timestamp_seconds{namespace="app-d-kustomize"}`,
+				`kube_applier_namespace_apply_count{namespace="app-d-kustomize",success="true"} 1`,
+				`kube_applier_run_latency_seconds`,
+				`kube_applier_run_queue{namespace="app-d-kustomize",type="Git polling run"} 0`,
 			})
 		})
 	})

@@ -135,6 +135,14 @@ to prevent kube-applier from pruning it. However, since it is a secret itself
 and would need be encrypted as well in git, it must be created manually the
 first time (or after any changes to its contents).
 
+#### Private Kustomize Bases
+
+If not overridden via Waybill.Spec.gitSSHSecretRef configuration (see below),
+Kube-Applier will use the SSH key passed via `-git-ssh-key-path` as the default
+key flag to try fetching remote `kustomize` bases from private repositories.
+Since this relies on using SSH to fetch from upstreams, the bases should be
+defined with the `ssh://` scheme in `kustomization.yaml`.
+
 #### Custom SSH Keys
 
 You can specify custom SSH keys to be used for fetching remote `kustomize` bases

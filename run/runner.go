@@ -124,17 +124,18 @@ func uniqueStrings(in []string) []string {
 // Runner manages the full process of an apply run, including getting the
 // appropriate files, running apply commands on them, and handling the results.
 type Runner struct {
-	Clock          sysutil.ClockInterface
-	DryRun         bool
-	KubeClient     *client.Client
-	KubeCtlClient  *kubectl.Client
-	PruneBlacklist []string
-	RepoPath       string
-	Repository     *git.Repository
-	Strongbox      StrongboxInterface
-	WorkerCount    int
-	workerGroup    *sync.WaitGroup
-	workerQueue    chan Request
+	Clock                sysutil.ClockInterface
+	DefaultGitSSHKeyPath string
+	DryRun               bool
+	KubeClient           *client.Client
+	KubeCtlClient        *kubectl.Client
+	PruneBlacklist       []string
+	RepoPath             string
+	Repository           *git.Repository
+	Strongbox            StrongboxInterface
+	WorkerCount          int
+	workerGroup          *sync.WaitGroup
+	workerQueue          chan Request
 }
 
 // Start runs a continuous loop that starts a new run when a request comes into the queue channel.
@@ -410,10 +411,14 @@ func (r *Runner) setupGitSSH(ctx context.Context, waybill *kubeapplierv1alpha1.W
 	sshDir := filepath.Join(tmpHomeDir, ".ssh")
 	os.Mkdir(sshDir, 0700)
 	if waybill.Spec.GitSSHSecretRef == nil {
-		// Even when there is no git SSH secret defined, we still override the
-		// git ssh command (pointing the key to /dev/null) in order to avoid
-		// using ssh keys in default system locations and to surface the error
-		// if bases over ssh have been configured.
+		// If there is no SSH secret defined, fall back to using the one
+		// provided to kube-applier as a flag to clone the root repo.
+		if r.DefaultGitSSHKeyPath != "" {
+			log.Logger("runner").Debug("No GitSSHSecretRef set, falling back to root repo ssh config path", "path", r.DefaultGitSSHKeyPath)
+			return fmt.Sprintf("GIT_SSH_COMMAND=ssh -q -F none -o IdentitiesOnly=yes -o User=git -o IdentityFile=%s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no", r.DefaultGitSSHKeyPath), nil
+		}
+		// Else override the git ssh command (pointing the key to /dev/null) to surface the error if bases over ssh have been configured.
+		log.Logger("runner").Debug("No Git SSH key found, pointing identity file to /dev/null")
 		return `GIT_SSH_COMMAND=ssh -q -F none -o IdentitiesOnly=yes -o IdentityFile=/dev/null -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no`, nil
 	}
 	gsNamespace := waybill.Spec.GitSSHSecretRef.Namespace
