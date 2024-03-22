@@ -501,7 +501,7 @@ Some error output has been omitted because it may contain sensitive data
 					Commit:       bHeadCommitHash,
 					ErrorMessage: "exit status 1",
 					Finished:     metav1.Time{},
-					Output:       `(?s)Error: accumulating resources:.*'ssh:\/\/deploy_github_com\/utilitywarehouse\/kube-applier\/\/testdata\/bases\/simple-deployment\?ref=master'.*exit status 128`,
+					Output:       `(?s).*Please make sure you have the correct access rights.*exit status 128`,
 					Started:      metav1.Time{},
 					Success:      false,
 					Type:         PollingRun.String(),
