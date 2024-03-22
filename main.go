@@ -26,7 +26,7 @@ var (
 	fDryRun              = flag.Bool("dry-run", getBoolEnv("DRY_RUN", false), "Whether kube-applier operates in dry-run mode globally")
 	fGitPollWait         = flag.Duration("git-poll-wait", getDurationEnv("GIT_POLL_WAIT", time.Second*5), "How long kube-applier waits before checking for changes in the repository")
 	fGitKnownHostsPath   = flag.String("git-ssh-known-hosts-path", getStringEnv("GIT_KNOWN_HOSTS_PATH", ""), "Path to the known hosts file used for fetching the repository")
-	fGitSSHKeyPath       = flag.String("git-ssh-key-path", getStringEnv("GIT_SSH_KEY_PATH", ""), "Path to the SSH key file used for fetching the repository")
+	fGitSSHKeyPath       = flag.String("git-ssh-key-path", getStringEnv("GIT_SSH_KEY_PATH", ""), "Path to the SSH key file used for fetching the repository. This will also be used for any Kustomize bases fetched via ssh, unless overridden by Waybill.Spec.GitSSHSecretRef config")
 	fListenPort          = flag.Int("listen-port", getIntEnv("LISTEN_PORT", 8080), "Port that the http server is listening on")
 	fLogLevel            = flag.String("log-level", getStringEnv("LOG_LEVEL", "warn"), "Logging level: trace, debug, info, warn, error, off")
 	fOidcCallbackURL     = flag.String("oidc-callback-url", getStringEnv("OIDC_CALLBACK_URL", ""), "OIDC callback url should be the root URL where kube-applier is exposed")
@@ -161,15 +161,16 @@ func main() {
 	}
 
 	runner := &run.Runner{
-		Clock:          clock,
-		DryRun:         *fDryRun,
-		KubeClient:     kubeClient,
-		KubeCtlClient:  kubeCtlClient,
-		PruneBlacklist: pruneBlacklistSlice,
-		Repository:     repo,
-		RepoPath:       *fRepoPath,
-		Strongbox:      &run.Strongboxer{},
-		WorkerCount:    *fWorkerCount,
+		Clock:                clock,
+		DefaultGitSSHKeyPath: *fGitSSHKeyPath,
+		DryRun:               *fDryRun,
+		KubeClient:           kubeClient,
+		KubeCtlClient:        kubeCtlClient,
+		PruneBlacklist:       pruneBlacklistSlice,
+		Repository:           repo,
+		RepoPath:             *fRepoPath,
+		Strongbox:            &run.Strongboxer{},
+		WorkerCount:          *fWorkerCount,
 	}
 
 	runQueue := runner.Start()
