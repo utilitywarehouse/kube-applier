@@ -1,6 +1,6 @@
 module github.com/utilitywarehouse/kube-applier
 
-go 1.20
+go 1.22
 
 require (
 	github.com/go-test/deep v1.0.5
