@@ -5,7 +5,7 @@ WORKDIR /src
 RUN apk --no-cache add git gcc make musl-dev curl bash openssh-client
 
 ENV \
-  KUBECTL_VERSION=v1.26.1 \
+  KUBECTL_VERSION=v1.30.1 \
   KUSTOMIZE_VERSION=v5.4.1 \
   STRONGBOX_VERSION=1.1.0
 
