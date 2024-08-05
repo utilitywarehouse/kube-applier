@@ -34,12 +34,20 @@ func (sb *strongboxBase) SetupStrongboxKeyring(ctx context.Context, kubeClient *
 	if err := checkSecretIsAllowed(waybill, secret); err != nil {
 		return err
 	}
-	strongboxData, ok := secret.Data[".strongbox_keyring"]
-	if !ok {
-		return fmt.Errorf(`secret "%s/%s" does not contain key '.strongbox_keyring'`, secret.Namespace, secret.Name)
+	keyring, ok1 := secret.Data[".strongbox_keyring"]
+	if ok1 {
+		if err := os.WriteFile(filepath.Join(homeDir, ".strongbox_keyring"), keyring, 0400); err != nil {
+			return err
+		}
 	}
-	if err := os.WriteFile(filepath.Join(homeDir, ".strongbox_keyring"), strongboxData, 0400); err != nil {
-		return err
+	identity, ok2 := secret.Data[".strongbox_identity"]
+	if ok2 {
+		if err := os.WriteFile(filepath.Join(homeDir, ".strongbox_identity"), identity, 0400); err != nil {
+			return err
+		}
+	}
+	if !ok1 && !ok2 {
+		return fmt.Errorf(`secret "%s/%s" does not contain key '.strongbox_keyring' or '.strongbox_identity'`, secret.Namespace, secret.Name)
 	}
 	return nil
 }
