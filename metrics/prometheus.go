@@ -23,7 +23,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 	"github.com/utilitywarehouse/kube-applier/log"
@@ -252,7 +252,7 @@ func ReconcileFromWaybillList(waybills []kubeapplierv1alpha1.Waybill) {
 	waybillSpecRunInterval.Reset()
 	for _, wb := range waybills {
 		var autoApply, dryRun float64
-		if pointer.BoolPtrDerefOr(wb.Spec.AutoApply, true) {
+		if ptr.Deref(wb.Spec.AutoApply, true) {
 			autoApply = 1
 		}
 		if wb.Spec.DryRun {
