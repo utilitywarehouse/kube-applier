@@ -82,15 +82,16 @@ at first in order to bootstrap the kube-applier integration in a namespace.
 #### Integration with `strongbox`
 
 [strongbox](https://github.com/uw-labs/strongbox) is an encryption tool, geared
-towards git repositories and working as a git filter.
+towards Git repositories and working as a Git filter.
 
 If `strongboxKeyringSecretRef` is defined in the Waybill spec (it is an object
 that contains the attributes `name` and `namespace`), it should reference a
-Secret resource which contains a key named `.strongbox_keyring` with its value
-being a valid strongbox keyring file. That keyring is subsequently used when
-applying the Waybill, allowing for decryption of files under the
-`repositoryPath`. If the attribute `namespace` for `strongboxKeyringSecretRef`
-is not specified then it defaults to the same namespace as the Waybill itself.
+Secret resource which contains a key named `.strongbox_keyring` or
+`.strongbox_identity` with the value being a valid Strongbox keyring or
+identity file. That keyring/identity is subsequently used when applying the
+Waybill, allowing for decryption of files under the `repositoryPath`. If the
+attribute `namespace` for `strongboxKeyringSecretRef` is not specified then it
+defaults to the same namespace as the Waybill itself.
 
 This secret should be readable by the ServiceAccount of kube-applier. If
 deployed using the provided kustomize bases, kube-applier's ServiceAccount will
@@ -104,22 +105,35 @@ the Secret should have an annotation called
 all the namespaces that are allowed to use it.
 
 For example, the following secret can be used by namespaces "ns-a", "ns-b" and
-"ns-c":
+"ns-c", assuming its deployed in `ns-a`:
 
-```
-kind: Secret
-apiVersion: v1
-metadata:
-  name: kube-applier-strongbox-keyring
-  namespace: ns-a
-  annotations:
-    kube-applier.io/allowed-namespaces: "ns-b, ns-c"
-stringData:
-  .strongbox_keyring: |-
-    keyentries:
-    - description: mykey
-      key-id: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-      key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+```bash
+# ./kustomization.yaml
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+secretGenerator:
+  - name: kube-applier-strongbox-keyring
+    files:
+      - .strongbox_keyring=strongbox-keyring
+      - .strongbox_identity=strongbox-identity
+    options:
+      annotations:
+        kube-applier.io/allowed-namespaces: "ns-b, ns-c"
+
+# ./strongbox-keyring
+
+keyentries:
+- description: mykey
+  key-id: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+  key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+
+# ./strongbox-identity
+
+# description: ident1
+# public key: age1ex4ph3ryaathfac0xpjhxk50utn50mtprke7h0vsmdlh6j63q5dsafxehs
+AGE-SECRET-KEY-1GNC98E3WNPAXE49FATT434CFC2THV5Q0SLW45T3VNYUVZ4F8TY6SREQR9Q
 ```
 
 Each item in the list of allowed namespaces supports [shell pattern
@@ -399,7 +413,7 @@ $ make release VERSION=v3.3.3-rc.3
 
 Copyright 2016 Box, Inc. All rights reserved.
 
-Copyright (c) 2017-2023 Utility Warehouse Ltd.
+Copyright (c) 2017-2024 Utility Warehouse Ltd.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

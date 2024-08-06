@@ -339,7 +339,7 @@ func (r *Runner) setupRepositoryClone(ctx context.Context, waybill *kubeapplierv
 		repositoryPath = waybill.Namespace
 	}
 	subpath := filepath.Join(r.RepoPath, repositoryPath)
-	// Point strongbox home to the temporary home to be able to decrypt files based on waybill cnfiguratn
+	// Point Strongbox home to the temporary home to be able to decrypt files based on Waybill configuration
 	hash, err := r.Repository.CloneLocal(ctx, []string{fmt.Sprintf("STRONGBOX_HOME=%s", tmpHomeDir)}, tmpRepoDir, subpath)
 	if err != nil {
 		return "", "", err
