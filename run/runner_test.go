@@ -20,7 +20,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
@@ -76,7 +76,7 @@ func TestApplyOptions_pruneWhitelist(t *testing.T) {
 			&ApplyOptions{},
 			&kubeapplierv1alpha1.Waybill{
 				Spec: kubeapplierv1alpha1.WaybillSpec{
-					Prune: pointer.BoolPtr(true),
+					Prune: ptr.To(true),
 				},
 			},
 			[]string{},
@@ -86,7 +86,7 @@ func TestApplyOptions_pruneWhitelist(t *testing.T) {
 			applyOptions,
 			&kubeapplierv1alpha1.Waybill{
 				Spec: kubeapplierv1alpha1.WaybillSpec{
-					Prune: pointer.BoolPtr(true),
+					Prune: ptr.To(true),
 				},
 			},
 			[]string{},
@@ -96,7 +96,7 @@ func TestApplyOptions_pruneWhitelist(t *testing.T) {
 			applyOptions,
 			&kubeapplierv1alpha1.Waybill{
 				Spec: kubeapplierv1alpha1.WaybillSpec{
-					Prune:          pointer.BoolPtr(true),
+					Prune:          ptr.To(true),
 					PruneBlacklist: []string{"b"},
 				},
 			},
@@ -107,7 +107,7 @@ func TestApplyOptions_pruneWhitelist(t *testing.T) {
 			applyOptions,
 			&kubeapplierv1alpha1.Waybill{
 				Spec: kubeapplierv1alpha1.WaybillSpec{
-					Prune:                 pointer.BoolPtr(true),
+					Prune:                 ptr.To(true),
 					PruneBlacklist:        []string{"b"},
 					PruneClusterResources: true,
 				},
@@ -192,8 +192,8 @@ var _ = Describe("Runner", func() {
 						Namespace: "app-a",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply: pointer.BoolPtr(true),
-						Prune:     pointer.BoolPtr(true),
+						AutoApply: ptr.To(true),
+						Prune:     ptr.To(true),
 					},
 				},
 				{
@@ -203,8 +203,8 @@ var _ = Describe("Runner", func() {
 						Namespace: "app-b",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:             pointer.BoolPtr(true),
-						Prune:                 pointer.BoolPtr(true),
+						AutoApply:             ptr.To(true),
+						Prune:                 ptr.To(true),
 						PruneClusterResources: true,
 					},
 				},
@@ -215,9 +215,9 @@ var _ = Describe("Runner", func() {
 						Namespace: "app-c",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:      pointer.BoolPtr(true),
+						AutoApply:      ptr.To(true),
 						DryRun:         true,
-						Prune:          pointer.BoolPtr(true),
+						Prune:          ptr.To(true),
 						PruneBlacklist: []string{"core/v1/Pod"},
 					},
 				},
@@ -314,8 +314,8 @@ deployment.apps/test-deployment created (server dry run)
 					Namespace: "app-a-kustomize",
 				},
 				Spec: kubeapplierv1alpha1.WaybillSpec{
-					AutoApply: pointer.BoolPtr(true),
-					Prune:     pointer.BoolPtr(true),
+					AutoApply: ptr.To(true),
+					Prune:     ptr.To(true),
 				},
 			}
 
@@ -377,8 +377,8 @@ Some error output has been omitted because it may contain sensitive data
 						Namespace: "app-b-kustomize-nokey",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:      pointer.BoolPtr(true),
-						Prune:          pointer.BoolPtr(true),
+						AutoApply:      ptr.To(true),
+						Prune:          ptr.To(true),
 						RepositoryPath: "app-b-kustomize",
 					},
 				},
@@ -389,8 +389,8 @@ Some error output has been omitted because it may contain sensitive data
 						Namespace: "app-b-kustomize-notfound",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:       pointer.BoolPtr(true),
-						Prune:           pointer.BoolPtr(true),
+						AutoApply:       ptr.To(true),
+						Prune:           ptr.To(true),
 						RepositoryPath:  "app-b-kustomize",
 						GitSSHSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "git-ssh"},
 					},
@@ -402,8 +402,8 @@ Some error output has been omitted because it may contain sensitive data
 						Namespace: "app-b-kustomize-noaccess",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:       pointer.BoolPtr(true),
-						Prune:           pointer.BoolPtr(true),
+						AutoApply:       ptr.To(true),
+						Prune:           ptr.To(true),
 						RepositoryPath:  "app-b-kustomize",
 						GitSSHSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "git-ssh"},
 					},
@@ -415,8 +415,8 @@ Some error output has been omitted because it may contain sensitive data
 						Namespace: "app-b-kustomize",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:       pointer.BoolPtr(true),
-						Prune:           pointer.BoolPtr(true),
+						AutoApply:       ptr.To(true),
+						Prune:           ptr.To(true),
 						RepositoryPath:  "app-b-kustomize",
 						GitSSHSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "git-ssh"},
 					},
@@ -428,8 +428,8 @@ Some error output has been omitted because it may contain sensitive data
 						Namespace: "app-b-kustomize-twokeys",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:       pointer.BoolPtr(true),
-						Prune:           pointer.BoolPtr(true),
+						AutoApply:       ptr.To(true),
+						Prune:           ptr.To(true),
 						RepositoryPath:  "app-b-kustomize",
 						GitSSHSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "git-ssh"},
 					},
@@ -441,8 +441,8 @@ Some error output has been omitted because it may contain sensitive data
 						Namespace: "app-c-kustomize-withkey",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:       pointer.BoolPtr(true),
-						Prune:           pointer.BoolPtr(true),
+						AutoApply:       ptr.To(true),
+						Prune:           ptr.To(true),
 						RepositoryPath:  "app-c-kustomize",
 						GitSSHSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "git-ssh"},
 					},
@@ -626,8 +626,8 @@ deployment.apps/test-deployment created
 					Namespace: "app-d-kustomize",
 				},
 				Spec: kubeapplierv1alpha1.WaybillSpec{
-					AutoApply: pointer.BoolPtr(true),
-					Prune:     pointer.BoolPtr(true),
+					AutoApply: ptr.To(true),
+					Prune:     ptr.To(true),
 				},
 			}
 
@@ -681,8 +681,8 @@ deployment.apps/test-deployment created
 						Namespace: "app-d-missing",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:      pointer.BoolPtr(true),
-						Prune:          pointer.BoolPtr(true),
+						AutoApply:      ptr.To(true),
+						Prune:          ptr.To(true),
 						RepositoryPath: "app-d",
 					},
 				},
@@ -693,8 +693,8 @@ deployment.apps/test-deployment created
 						Namespace: "app-d-notfound",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 pointer.BoolPtr(true),
-						Prune:                     pointer.BoolPtr(true),
+						AutoApply:                 ptr.To(true),
+						Prune:                     ptr.To(true),
 						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "invalid"},
 					},
 				},
@@ -705,8 +705,8 @@ deployment.apps/test-deployment created
 						Namespace: "app-d-empty",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 pointer.BoolPtr(true),
-						Prune:                     pointer.BoolPtr(true),
+						AutoApply:                 ptr.To(true),
+						Prune:                     ptr.To(true),
 						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox-empty"},
 					},
 				},
@@ -717,8 +717,8 @@ deployment.apps/test-deployment created
 						Namespace: "app-d",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 pointer.BoolPtr(true),
-						Prune:                     pointer.BoolPtr(true),
+						AutoApply:                 ptr.To(true),
+						Prune:                     ptr.To(true),
 						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox"},
 					},
 				},
@@ -729,8 +729,8 @@ deployment.apps/test-deployment created
 						Namespace: "app-d-strongbox-shared-not-allowed",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 pointer.BoolPtr(true),
-						Prune:                     pointer.BoolPtr(true),
+						AutoApply:                 ptr.To(true),
+						Prune:                     ptr.To(true),
 						RepositoryPath:            "app-d",
 						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox", Namespace: "app-d"},
 					},
@@ -742,8 +742,8 @@ deployment.apps/test-deployment created
 						Namespace: "app-d-strongbox-shared",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 pointer.BoolPtr(true),
-						Prune:                     pointer.BoolPtr(true),
+						AutoApply:                 ptr.To(true),
+						Prune:                     ptr.To(true),
 						RepositoryPath:            "app-d",
 						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox", Namespace: "app-d"},
 					},
@@ -755,8 +755,8 @@ deployment.apps/test-deployment created
 						Namespace: "app-d-strongbox-shared-is-allowed",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 pointer.BoolPtr(true),
-						Prune:                     pointer.BoolPtr(true),
+						AutoApply:                 ptr.To(true),
+						Prune:                     ptr.To(true),
 						RepositoryPath:            "app-d",
 						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox", Namespace: "app-d"},
 					},
@@ -1057,8 +1057,8 @@ var _ = Describe("Run Queue", func() {
 					Namespace: "waybill-auto-apply-disabled",
 				},
 				Spec: kubeapplierv1alpha1.WaybillSpec{
-					AutoApply: pointer.BoolPtr(false),
-					Prune:     pointer.BoolPtr(true),
+					AutoApply: ptr.To(false),
+					Prune:     ptr.To(true),
 				},
 			}
 
@@ -1094,7 +1094,7 @@ func matchWaybill(expected kubeapplierv1alpha1.Waybill, kubectlPath, kustomizePa
 			} else {
 				commandExtraArgs += " --dry-run=none"
 			}
-			if pointer.BoolPtrDerefOr(expected.Spec.Prune, true) {
+			if ptr.Deref(expected.Spec.Prune, true) {
 				commandExtraArgs += fmt.Sprintf(" --prune --all --prune-allowlist=%s", strings.Join(pruneWhitelist, " --prune-allowlist="))
 			}
 			repositoryPath := expected.Spec.RepositoryPath

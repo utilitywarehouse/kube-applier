@@ -31,7 +31,7 @@ controller-gen-install:
 	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.3
 
 KUBEBUILDER_BINDIR=$${PWD}/kubebuilder-bindir
-KUBEBUILDER_VERSION="1.26.x"
+KUBEBUILDER_VERSION="1.30.x"
 test:
 	command -v setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 	mkdir -p $(KUBEBUILDER_BINDIR)

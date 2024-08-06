@@ -14,7 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 	"github.com/utilitywarehouse/kube-applier/log"
@@ -99,7 +99,7 @@ var _ = Describe("Scheduler", func() {
 						Namespace: "foo-disabled-auto-apply",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:   pointer.BoolPtr(false),
+						AutoApply:   ptr.To(false),
 						RunInterval: 5,
 					},
 				},
@@ -230,7 +230,7 @@ var _ = Describe("Scheduler", func() {
 					ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "scheduler-polling-app-a-kustomize-no-auto-apply"},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
 						RepositoryPath: "app-a-kustomize",
-						AutoApply:      pointer.BoolPtr(false),
+						AutoApply:      ptr.To(false),
 					},
 					Status: kubeapplierv1alpha1.WaybillStatus{
 						LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
@@ -333,7 +333,7 @@ Some error output has been omitted because it may contain sensitive data
 					TypeMeta:   metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
 					ObjectMeta: metav1.ObjectMeta{Name: "main", Namespace: "spec-baz"},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply: pointer.BoolPtr(false),
+						AutoApply: ptr.To(false),
 					},
 				},
 			}
