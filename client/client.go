@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"slices"
 	"sort"
 	"strings"
 
@@ -78,10 +79,11 @@ func newClient(cfg *rest.Config, opts ...cluster.Option) (*Client, error) {
 		options.Scheme = scheme
 		options.NewCache = func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
 			// Only cache events for Waybills
-			opts.SelectorsByObject = cache.SelectorsByObject{
-				&corev1.Event{}: {
-					Field: fields.SelectorFromSet(fields.Set{"involvedObject.kind": "Waybill"}),
-				},
+			if opts.ByObject == nil {
+				opts.ByObject = make(map[client.Object]cache.ByObject)
+			}
+			opts.ByObject[&corev1.Event{}] = cache.ByObject{
+				Field: fields.SelectorFromSet(fields.Set{"involvedObject.kind": "Waybill"}),
 			}
 			return cache.New(config, opts)
 		}
@@ -287,6 +289,11 @@ func (c *Client) PrunableResourceGVKs(ctx context.Context, namespace string) ([]
 			}
 		}
 	}
+
+	// resourceList no longer sorted and its a randomly sorted list on each call
+	// this behaviour affects all the test based on this list
+	slices.Sort(cluster)
+	slices.Sort(namespaced)
 
 	return cluster, namespaced, nil
 }

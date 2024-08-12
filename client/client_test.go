@@ -24,6 +24,7 @@ var _ = Describe("Client", func() {
 			user, err := testEnv.AddUser(envtest.User{Name: "foobar"}, testConfig)
 			Expect(err).NotTo(HaveOccurred())
 			userKubeClient, err := NewWithConfig(user.Config())
+			Expect(err).NotTo(HaveOccurred())
 			defer userKubeClient.Shutdown()
 			Expect(userKubeClient).ToNot(BeNil())
 
@@ -109,8 +110,8 @@ var _ = Describe("Client", func() {
 				"storage.k8s.io/v1/StorageClass",
 			}))
 			Expect(namespaced).To(Equal([]string{
-				"core/v1/Pod",
 				"apps/v1/Deployment",
+				"core/v1/Pod",
 			}))
 		})
 	})

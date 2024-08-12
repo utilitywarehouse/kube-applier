@@ -8,7 +8,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 )
@@ -143,7 +143,7 @@ func commitLink(diffUrl, commit string) string {
 // of its autoApply and dryRun attributes.
 func status(wb kubeapplierv1alpha1.Waybill) string {
 	ret := []string{}
-	if !pointer.BoolPtrDerefOr(wb.Spec.AutoApply, true) {
+	if !ptr.Deref(wb.Spec.AutoApply, true) {
 		ret = append(ret, "auto-apply disabled")
 	}
 	if wb.Spec.DryRun {
