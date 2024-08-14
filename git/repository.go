@@ -355,9 +355,10 @@ func (r *Repository) CloneLocal(ctx context.Context, environment []string, dst, 
 		return "", err
 	}
 
+	// git clone --no-checkout src dst
+	//
 	// Uncomment and use the following if running a Docker build with rootless Docker
 	//if _, err := r.runGitCommand(ctx, nil, "", "clone", "--no-checkout", "--no-hardlinks", r.path, dst); err != nil {
-	// git clone --no-checkout src dst
 	if _, err := r.runGitCommand(ctx, nil, "", "clone", "--no-checkout", r.path, dst); err != nil {
 		return "", err
 	}
