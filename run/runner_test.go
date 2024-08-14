@@ -890,6 +890,222 @@ deployment.apps/test-deployment created
 		})
 	})
 
+	Context("When operating on a Waybill that defines a Strongbox identity", func() {
+		It("Should be able to apply encrypted files, given a Strongbox identity Secret", func() {
+			wbList := []*kubeapplierv1alpha1.Waybill{
+				{
+					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "strongbox-age",
+						Namespace: "strongbox-age-missing",
+					},
+					Spec: kubeapplierv1alpha1.WaybillSpec{
+						AutoApply:      ptr.To(true),
+						Prune:          ptr.To(true),
+						RepositoryPath: "strongbox-age",
+					},
+				},
+				{
+					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "strongbox-age",
+						Namespace: "strongbox-age-notfound",
+					},
+					Spec: kubeapplierv1alpha1.WaybillSpec{
+						AutoApply:                 ptr.To(true),
+						Prune:                     ptr.To(true),
+						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "invalid"},
+					},
+				},
+				{
+					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "strongbox-age",
+						Namespace: "strongbox-age-empty",
+					},
+					Spec: kubeapplierv1alpha1.WaybillSpec{
+						AutoApply:                 ptr.To(true),
+						Prune:                     ptr.To(true),
+						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox-empty"},
+					},
+				},
+				{
+					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "strongbox-age",
+						Namespace: "strongbox-age",
+					},
+					Spec: kubeapplierv1alpha1.WaybillSpec{
+						AutoApply:                 ptr.To(true),
+						Prune:                     ptr.To(true),
+						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox"},
+					},
+				},
+				{
+					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "strongbox-age",
+						Namespace: "strongbox-age-strongbox-shared-not-allowed",
+					},
+					Spec: kubeapplierv1alpha1.WaybillSpec{
+						AutoApply:                 ptr.To(true),
+						Prune:                     ptr.To(true),
+						RepositoryPath:            "strongbox-age",
+						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox", Namespace: "strongbox-age"},
+					},
+				},
+				{
+					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "strongbox-age",
+						Namespace: "strongbox-age-strongbox-shared",
+					},
+					Spec: kubeapplierv1alpha1.WaybillSpec{
+						AutoApply:                 ptr.To(true),
+						Prune:                     ptr.To(true),
+						RepositoryPath:            "strongbox-age",
+						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox", Namespace: "strongbox-age"},
+					},
+				},
+				{
+					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "strongbox-age",
+						Namespace: "strongbox-age-strongbox-shared-is-allowed",
+					},
+					Spec: kubeapplierv1alpha1.WaybillSpec{
+						AutoApply:                 ptr.To(true),
+						Prune:                     ptr.To(true),
+						RepositoryPath:            "strongbox-age",
+						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox", Namespace: "strongbox-age"},
+					},
+				},
+			}
+
+			testEnsureWaybills(wbList)
+
+			Expect(k8sClient.GetClient().Create(context.TODO(), &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "strongbox",
+					Namespace:   "strongbox-age",
+					Annotations: map[string]string{secretAllowedNamespacesAnnotation: "strongbox-age-strongbox-shared,strongbox-age-strongbox-shared-is-*"},
+				},
+				StringData: map[string]string{
+					".strongbox_identity": `# description: ident1
+# public key: age1ex4ph3ryaathfac0xpjhxk50utn50mtprke7h0vsmdlh6j63q5dsafxehs
+AGE-SECRET-KEY-1GNC98E3WNPAXE49FATT434CFC2THV5Q0SLW45T3VNYUVZ4F8TY6SREQR9Q`,
+				},
+				Type: corev1.SecretTypeOpaque,
+			})).To(BeNil())
+			Expect(k8sClient.GetClient().Create(context.TODO(), &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "strongbox-empty",
+					Namespace: "strongbox-age-empty",
+				},
+				Type: corev1.SecretTypeOpaque,
+			})).To(BeNil())
+
+			headCommitHash, err := runner.Repository.HashForPath(context.TODO(), filepath.Join(runner.RepoPath, "strongbox-age"))
+			Expect(err).To(BeNil())
+			Expect(headCommitHash).ToNot(BeEmpty())
+
+			expectedStatus := []*kubeapplierv1alpha1.WaybillStatusRun{
+				{
+					Command:      "",
+					Commit:       headCommitHash,
+					ErrorMessage: "exit status 1",
+					Finished:     metav1.Time{},
+					Output:       `(?s)namespace/strongbox-age.*error:.*strongbox-age_repo_[\d]+.*invalid Yaml document separator: --BEGIN AGE ENCRYPTED FILE-----`,
+					Started:      metav1.Time{},
+					Success:      false,
+					Type:         PollingRun.String(),
+				},
+				nil,
+				nil,
+				{
+					Command:      "",
+					Commit:       headCommitHash,
+					ErrorMessage: "",
+					Finished:     metav1.Time{},
+					Output: `namespace/strongbox-age unchanged
+deployment.apps/test-deployment created
+`,
+					Started: metav1.Time{},
+					Success: true,
+					Type:    PollingRun.String(),
+				},
+				nil,
+				{
+					Command:      "",
+					Commit:       headCommitHash,
+					ErrorMessage: "",
+					Finished:     metav1.Time{},
+					Output: `namespace/strongbox-age unchanged
+deployment.apps/test-deployment created
+`,
+					Started: metav1.Time{},
+					Success: true,
+					Type:    PollingRun.String(),
+				},
+				{
+					Command:      "",
+					Commit:       headCommitHash,
+					ErrorMessage: "",
+					Finished:     metav1.Time{},
+					Output: `namespace/strongbox-age unchanged
+deployment.apps/test-deployment created
+`,
+					Started: metav1.Time{},
+					Success: true,
+					Type:    PollingRun.String(),
+				},
+			}
+
+			// construct expected waybill list
+			expected := make([]kubeapplierv1alpha1.Waybill, len(wbList))
+			for i := range wbList {
+				expected[i] = *wbList[i]
+				expected[i].Status = kubeapplierv1alpha1.WaybillStatus{LastRun: expectedStatus[i]}
+			}
+
+			for i := range wbList {
+				Enqueue(runQueue, PollingRun, wbList[i])
+			}
+
+			Eventually(
+				func() error {
+					deployment := &appsv1.Deployment{}
+					return k8sClient.GetAPIReader().Get(context.TODO(), client.ObjectKey{Namespace: "strongbox-age", Name: "test-deployment"}, deployment)
+				},
+				time.Second*15,
+				time.Second,
+			).Should(BeNil())
+
+			testMatchEvents([]gomegatypes.GomegaMatcher{
+				matchEvent(*wbList[1], corev1.EventTypeWarning, "WaybillRunRequestFailed", `failed setting up repository clone: secrets "invalid" not found`),
+				matchEvent(*wbList[2], corev1.EventTypeWarning, "WaybillRunRequestFailed", `failed setting up repository clone: secret "strongbox-age-empty/strongbox-empty" does not contain key '.strongbox_keyring'`),
+			})
+
+			runner.Stop()
+
+			for i := range wbList {
+				if wbList[i].Status.LastRun != nil {
+					wbList[i].Status.LastRun.Output = testStripKubectlWarnings(wbList[i].Status.LastRun.Output)
+				}
+				Expect(*wbList[i]).Should(matchWaybill(expected[i], kubeCtlPath, "", runner.RepoPath, applyOptions.pruneWhitelist(wbList[i], runner.PruneBlacklist)))
+			}
+
+			testMetrics([]string{
+				`kube_applier_kubectl_exit_code_count{exit_code="1",namespace="strongbox-age-missing"} 1`,
+				`kube_applier_last_run_timestamp_seconds{namespace="strongbox-age"}`,
+				`kube_applier_namespace_apply_count{namespace="strongbox-age-missing",success="false"} 1`,
+				`kube_applier_namespace_apply_count{namespace="strongbox-age",success="true"} 1`,
+				`kube_applier_run_latency_seconds`,
+				`kube_applier_run_queue{namespace="strongbox-age",type="Git polling run"} 0`,
+			})
+		})
+	})
+
 	Context("When setting up the apply environment", func() {
 		It("Should properly validate the delegate Service Account secret", func() {
 			wbList := []*kubeapplierv1alpha1.Waybill{
