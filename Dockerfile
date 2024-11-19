@@ -6,7 +6,7 @@ RUN apk --no-cache add git gcc make musl-dev curl bash openssh-client
 
 ENV \
   KUBECTL_VERSION=v1.31.0 \
-  KUSTOMIZE_VERSION=v5.4.1 \
+  KUSTOMIZE_VERSION=v5.5.0 \
   STRONGBOX_VERSION=2.0.0-RC4
 
 RUN os=$(go env GOOS) && arch=$(go env GOARCH) \
