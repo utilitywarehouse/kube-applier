@@ -10,7 +10,7 @@ ENV \
   STRONGBOX_VERSION=2.0.0-RC4
 
 RUN os=$(go env GOOS) && arch=$(go env GOARCH) \
-  && curl -Ls -o /usr/local/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/${os}/${arch}/kubectl \
+  && curl -Ls -o /usr/local/bin/kubectl https://dl.k8s.io/${KUBECTL_VERSION}/bin/${os}/${arch}/kubectl \
   && chmod +x /usr/local/bin/kubectl \
   && curl -Ls https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize/${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_${os}_${arch}.tar.gz \
     | tar xz -C /usr/local/bin/ \
