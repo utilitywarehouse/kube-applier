@@ -4,13 +4,16 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
+	"github.com/go-logr/logr"
 	"github.com/utilitywarehouse/kube-applier/client"
 	"github.com/utilitywarehouse/kube-applier/git"
 	"github.com/utilitywarehouse/kube-applier/kubectl"
@@ -94,6 +97,14 @@ func main() {
 	flag.Parse()
 
 	log.SetLevel(*fLogLevel)
+
+	var slogLevel slog.Level
+	slogLevel.UnmarshalText([]byte(*fLogLevel))
+	ctrl.SetLogger(logr.FromSlogHandler(
+		slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+			Level: slogLevel,
+		}),
+	))
 
 	clock := &sysutil.Clock{}
 
