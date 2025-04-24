@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 	"github.com/utilitywarehouse/kube-applier/client"
@@ -62,6 +63,8 @@ func (s *Strongboxer) SetupGitConfigForStrongbox(ctx context.Context, waybill *k
 	}
 
 	cmd := exec.CommandContext(ctx, "strongbox", "-git-config")
+	// force kill command 5 seconds after sending it sigterm (when ctx is cancelled/timed out)
+	cmd.WaitDelay = 5 * time.Second
 	// Set PATH so we can find strongbox bin
 	cmd.Env = append(env, fmt.Sprintf("PATH=%s", os.Getenv("PATH")))
 	stderr, err := cmd.CombinedOutput()

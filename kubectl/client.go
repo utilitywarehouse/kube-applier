@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -148,6 +149,9 @@ func (c *Client) applyKustomize(ctx context.Context, path string, options ApplyO
 	var kustomizeStdout, kustomizeStderr bytes.Buffer
 
 	kustomizeCmd := exec.CommandContext(ctx, "kustomize", "build", path)
+	// force kill command 5 seconds after sending it sigterm (when ctx is cancelled/timed out)
+	kustomizeCmd.WaitDelay = 5 * time.Second
+
 	options.setCommandEnvironment(kustomizeCmd)
 	kustomizeCmd.Stdout = &kustomizeStdout
 	kustomizeCmd.Stderr = &kustomizeStderr
@@ -248,6 +252,8 @@ func (c *Client) apply(ctx context.Context, path string, stdin []byte, options A
 	args = append(c.KubeCtlOpts, args...)
 
 	kubectlCmd := exec.CommandContext(ctx, c.KubeCtlPath, args...)
+	// force kill command 5 seconds after sending it sigterm (when ctx is cancelled/timed out)
+	kubectlCmd.WaitDelay = 5 * time.Second
 	options.setCommandEnvironment(kubectlCmd)
 	if path == "-" {
 		if len(stdin) == 0 {
@@ -315,7 +321,7 @@ func splitSecrets(yamlData []byte) (resources, secrets []byte, err error) {
 // found in the yaml. If an error occurs, returns objects that have been parsed so far too.
 //
 // Taken from the gitops-engine:
-//  - https://github.com/argoproj/gitops-engine/blob/cc0fb5531c29c193291a7f97a50921f544b2d3b9/pkg/utils/kube/kube.go#L282-L310
+//   - https://github.com/argoproj/gitops-engine/blob/cc0fb5531c29c193291a7f97a50921f544b2d3b9/pkg/utils/kube/kube.go#L282-L310
 func splitYAML(yamlData []byte) ([]*unstructured.Unstructured, error) {
 	// Similar way to what kubectl does
 	// https://github.com/kubernetes/cli-runtime/blob/master/pkg/resource/visitor.go#L573-L600
