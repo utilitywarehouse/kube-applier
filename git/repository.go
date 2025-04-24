@@ -181,6 +181,9 @@ func (r *Repository) runGitCommand(ctx context.Context, environment []string, cw
 	if cwd != "" {
 		cmd.Dir = cwd
 	}
+	// force kill git & child process 5 seconds after sending it sigterm (when ctx is cancelled/timed out)
+	cmd.WaitDelay = 5 * time.Second
+
 	outbuf := bytes.NewBuffer(nil)
 	errbuf := bytes.NewBuffer(nil)
 	cmd.Stdout = outbuf
