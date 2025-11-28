@@ -35,8 +35,8 @@ KUBEBUILDER_VERSION="1.30.x"
 test:
 	command -v setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 	mkdir -p $(KUBEBUILDER_BINDIR)
-	setup-envtest --bin-dir $(KUBEBUILDER_BINDIR) use -p env $(KUBEBUILDER_VERSION)
-	source <(setup-envtest --bin-dir $(KUBEBUILDER_BINDIR) use -i -p env $(KUBEBUILDER_VERSION)); CGO_ENABLED=1; go test -v -race -count=1 -cover ./...
+	ASSETS=$$(setup-envtest --bin-dir $(KUBEBUILDER_BINDIR) use -p path $(KUBEBUILDER_VERSION)); \
+	KUBEBUILDER_ASSETS="$$ASSETS" CGO_ENABLED=1 go test -v -race -count=1 -cover ./...
 
 build:
 	docker build -t kube-applier .
