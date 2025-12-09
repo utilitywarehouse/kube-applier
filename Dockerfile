@@ -5,9 +5,9 @@ WORKDIR /src
 RUN apk --no-cache add git gcc make musl-dev curl bash openssh-client
 
 ENV \
-  KUBECTL_VERSION=v1.32.1 \
-  KUSTOMIZE_VERSION=v5.5.0 \
-  STRONGBOX_VERSION=2.0.0-RC4
+  KUBECTL_VERSION=v1.34.2 \
+  KUSTOMIZE_VERSION=v5.7.1 \
+  STRONGBOX_VERSION=2.1.0
 
 RUN os=$(go env GOOS) && arch=$(go env GOARCH) \
   && curl -Ls -o /usr/local/bin/kubectl https://dl.k8s.io/${KUBECTL_VERSION}/bin/${os}/${arch}/kubectl \
