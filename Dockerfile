@@ -1,4 +1,4 @@
-FROM golang:1.24-alpine AS build
+FROM golang:1.25-alpine AS build
 
 WORKDIR /src
 
@@ -27,7 +27,7 @@ RUN go get -t ./... \
   && make test \
   && CGO_ENABLED=0 && go build -o /kube-applier .
 
-FROM alpine:3.20
+FROM alpine:3.23
 RUN apk --no-cache add git openssh-client tini
 COPY templates/ /templates/
 COPY static/ /static/
