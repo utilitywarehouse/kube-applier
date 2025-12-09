@@ -3,6 +3,7 @@ module github.com/utilitywarehouse/kube-applier
 go 1.25
 
 require (
+	github.com/go-logr/logr v1.4.3
 	github.com/go-test/deep v1.0.5
 	github.com/google/go-cmp v0.7.0
 	github.com/gorilla/mux v1.8.1
