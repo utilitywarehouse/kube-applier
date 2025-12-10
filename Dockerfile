@@ -6,8 +6,8 @@ RUN apk --no-cache add git gcc make musl-dev curl bash openssh-client
 
 ENV \
   KUBECTL_VERSION=v1.34.2 \
-  KUSTOMIZE_VERSION=v5.5.0 \
-  STRONGBOX_VERSION=2.0.0-RC4
+  KUSTOMIZE_VERSION=v5.7.1 \
+  STRONGBOX_VERSION=2.1.0
 
 RUN os=$(go env GOOS) && arch=$(go env GOARCH) \
   && curl -Ls -o /usr/local/bin/kubectl https://dl.k8s.io/${KUBECTL_VERSION}/bin/${os}/${arch}/kubectl \
@@ -27,7 +27,7 @@ RUN go get -t ./... \
   && make test \
   && CGO_ENABLED=0 && go build -o /kube-applier .
 
-FROM alpine:3.20
+FROM alpine:3.23
 RUN apk --no-cache add git openssh-client tini
 COPY templates/ /templates/
 COPY static/ /static/
