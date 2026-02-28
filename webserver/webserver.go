@@ -117,6 +117,7 @@ func (f *ForceRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Result  string `json:"result"`
 		Message string `json:"message"`
 	}
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	switch r.Method {
 	case "POST":
@@ -199,7 +200,6 @@ func (f *ForceRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
-	w.Header().Set("Content-Type", "waybill/json; charset=UTF-8")
 	json.NewEncoder(w).Encode(data)
 }
 
