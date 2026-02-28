@@ -35,6 +35,7 @@ import (
 const (
 	defaultRunnerWorkerCount = 2
 	defaultWorkerQueueSize   = 512
+	enqueueTimeout           = 5 * time.Second
 
 	hostFragment = `Host %s_github_com
     HostName github.com
@@ -567,7 +568,7 @@ func Enqueue(queue chan<- Request, t Type, waybill *kubeapplierv1alpha1.Waybill)
 	case queue <- Request{Type: t, Waybill: waybill}:
 		log.Logger("runner").Debug("Run queued", "waybill", wbId, "type", t)
 		metrics.UpdateRunRequest(t.String(), waybill, 1)
-	case <-time.After(5 * time.Second):
+	case <-time.After(enqueueTimeout):
 		log.Logger("runner").Error("Timed out trying to queue a run, run queue is full", "waybill", wbId, "type", t)
 		metrics.AddRunRequestQueueFailure(t.String(), waybill)
 	}

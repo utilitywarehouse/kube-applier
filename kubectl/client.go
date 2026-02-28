@@ -34,6 +34,8 @@ var (
 	sanitiseCmdStrRe = regexp.MustCompile(`--token=[\S]+`)
 )
 
+const cmdWaitDelay = 5 * time.Second
+
 func sanitiseCmdStr(cmdStr string) string {
 	return sanitiseCmdStrRe.ReplaceAllString(cmdStr, "--token=<omitted>")
 }
@@ -144,7 +146,7 @@ func (c *Client) applyKustomize(ctx context.Context, path string, options ApplyO
 
 	kustomizeCmd := exec.CommandContext(ctx, "kustomize", "build", path)
 	// force kill command 5 seconds after sending it sigterm (when ctx is cancelled/timed out)
-	kustomizeCmd.WaitDelay = 5 * time.Second
+	kustomizeCmd.WaitDelay = cmdWaitDelay
 
 	options.setCommandEnvironment(kustomizeCmd)
 	kustomizeCmd.Stdout = &kustomizeStdout
@@ -247,7 +249,7 @@ func (c *Client) apply(ctx context.Context, path string, stdin []byte, options A
 
 	kubectlCmd := exec.CommandContext(ctx, c.KubeCtlPath, args...)
 	// force kill command 5 seconds after sending it sigterm (when ctx is cancelled/timed out)
-	kubectlCmd.WaitDelay = 5 * time.Second
+	kubectlCmd.WaitDelay = cmdWaitDelay
 	options.setCommandEnvironment(kubectlCmd)
 	if path == "-" {
 		if len(stdin) == 0 {

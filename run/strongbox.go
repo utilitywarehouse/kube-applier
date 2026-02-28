@@ -12,6 +12,8 @@ import (
 	"github.com/utilitywarehouse/kube-applier/client"
 )
 
+const cmdWaitDelay = 5 * time.Second
+
 // strongboxInterface holds functions to configure strongbox for waybill runs
 type StrongboxInterface interface {
 	SetupGitConfigForStrongbox(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, env []string) error
@@ -64,7 +66,7 @@ func (s *Strongboxer) SetupGitConfigForStrongbox(ctx context.Context, waybill *k
 
 	cmd := exec.CommandContext(ctx, "strongbox", "-git-config")
 	// force kill command 5 seconds after sending it sigterm (when ctx is cancelled/timed out)
-	cmd.WaitDelay = 5 * time.Second
+	cmd.WaitDelay = cmdWaitDelay
 	// Set PATH so we can find strongbox bin
 	cmd.Env = append(env, fmt.Sprintf("PATH=%s", os.Getenv("PATH")))
 	stderr, err := cmd.CombinedOutput()

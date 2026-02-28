@@ -33,6 +33,8 @@ var typeToString = []string{
 	"Failed run",      // FailedRun
 }
 
+const gitPollTimeout = 30 * time.Second
+
 const (
 	// ScheduledRun indicates a scheduled, regular apply run.
 	ScheduledRun Type = iota
@@ -169,7 +171,7 @@ func (s *Scheduler) gitPollingLoop() {
 }
 
 func (s *Scheduler) processGitChanges() {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+	ctx, cancel := context.WithTimeout(context.Background(), gitPollTimeout)
 	defer cancel()
 
 	hash, err := s.Repository.HashForPath(ctx, s.RepoPath)

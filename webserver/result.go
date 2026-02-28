@@ -15,6 +15,8 @@ import (
 
 var warningCheckReg = regexp.MustCompile("^Warning:.*")
 
+const appliedRecentlyWindow = 15 * time.Minute
+
 // namespace stores the current state of the waybill and events of a namespace.
 type Namespace struct {
 	Waybill       kubeapplierv1alpha1.Waybill
@@ -159,7 +161,7 @@ func status(wb kubeapplierv1alpha1.Waybill) string {
 // 15 minutes.
 func appliedRecently(waybill kubeapplierv1alpha1.Waybill) bool {
 	return waybill.Status.LastRun != nil &&
-		time.Since(waybill.Status.LastRun.Started.Time) < time.Minute*15
+		time.Since(waybill.Status.LastRun.Started.Time) < appliedRecentlyWindow
 }
 
 func splitByNewline(output string) []string {
