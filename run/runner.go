@@ -26,6 +26,7 @@ import (
 	"github.com/utilitywarehouse/kube-applier/client"
 	"github.com/utilitywarehouse/kube-applier/git"
 	"github.com/utilitywarehouse/kube-applier/kubectl"
+	"github.com/utilitywarehouse/kube-applier/kustomizeutil"
 	"github.com/utilitywarehouse/kube-applier/log"
 	"github.com/utilitywarehouse/kube-applier/metrics"
 	"github.com/utilitywarehouse/kube-applier/sysutil"
@@ -233,9 +234,18 @@ func (r *Runner) processRequest(request Request) error {
 	}
 
 	if request.Waybill.Status.LastRun.Success {
-		log.Logger("runner").Debug(fmt.Sprintf("Apply run output for %s:\n%s\n%s", wbId, request.Waybill.Status.LastRun.Command, request.Waybill.Status.LastRun.Output))
+		log.Logger("runner").Debug(
+			"Apply run output",
+			"waybill", wbId,
+			"command", request.Waybill.Status.LastRun.Command,
+			"output", request.Waybill.Status.LastRun.Output,
+		)
 	} else {
-		log.Logger("runner").Warn(fmt.Sprintf("Apply run for %s encountered errors:\n%s", wbId, request.Waybill.Status.LastRun.ErrorMessage))
+		log.Logger("runner").Warn(
+			"Apply run encountered errors",
+			"waybill", wbId,
+			"errorMessage", request.Waybill.Status.LastRun.ErrorMessage,
+		)
 	}
 
 	metrics.UpdateFromLastRun(request.Waybill)
@@ -367,9 +377,7 @@ func (r *Runner) updateRepoBaseAddresses(tmpRepoDir string) error {
 		if err != nil {
 			return err
 		}
-		if filepath.Base(path) == "kustomization.yaml" ||
-			filepath.Base(path) == "kustomization.yml" ||
-			filepath.Base(path) == "Kustomization" {
+		if kustomizeutil.IsKustomizationFileName(filepath.Base(path)) {
 			kFiles = append(kFiles, path)
 		}
 		return nil

@@ -20,6 +20,7 @@ import (
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/yaml"
 
+	"github.com/utilitywarehouse/kube-applier/kustomizeutil"
 	"github.com/utilitywarehouse/kube-applier/metrics"
 )
 
@@ -106,15 +107,7 @@ func NewClient(host, label, kubeCtlPath string, kubeCtlOpts []string) *Client {
 // Apply attempts to "kubectl apply" the files located at path. It returns the
 // full apply command and its output.
 func (c *Client) Apply(ctx context.Context, path string, options ApplyOptions) (string, string, error) {
-	var kustomize bool
-	if _, err := os.Stat(path + "/kustomization.yaml"); err == nil {
-		kustomize = true
-	} else if _, err := os.Stat(path + "/kustomization.yml"); err == nil {
-		kustomize = true
-	} else if _, err := os.Stat(path + "/Kustomization"); err == nil {
-		kustomize = true
-	}
-	if kustomize {
+	if kustomizeutil.HasKustomizationFile(path) {
 		cmd, out, err := c.applyKustomize(ctx, path, options)
 		return sanitiseCmdStr(cmd), out, err
 	}

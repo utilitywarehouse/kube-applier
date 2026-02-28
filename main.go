@@ -210,7 +210,7 @@ func main() {
 		StatusTimeout: *fStatusTimeout,
 	}
 	if err := webserver.Start(); err != nil {
-		log.Logger("kube-applier").Error(fmt.Sprintf("Cannot start webserver: %v", err))
+		log.Logger("kube-applier").Error("Cannot start webserver", "error", err)
 		os.Exit(1)
 	}
 
@@ -218,7 +218,7 @@ func main() {
 	<-ctx.Done()
 	log.Logger("kube-applier").Info("Interrupted, shutting down...")
 	if err := webserver.Shutdown(); err != nil {
-		log.Logger("kube-applier").Error(fmt.Sprintf("Cannot shutdown webserver: %v", err))
+		log.Logger("kube-applier").Error("Cannot shutdown webserver", "error", err)
 	}
 	repo.StopSync()
 	scheduler.Stop()
