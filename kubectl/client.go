@@ -5,6 +5,7 @@ package kubectl
 import (
 	"bytes"
 	"context"
+	stdErrors "errors"
 	"fmt"
 	"io"
 	"os"
@@ -332,7 +333,7 @@ func splitYAML(yamlData []byte) ([]*unstructured.Unstructured, error) {
 	for {
 		ext := runtime.RawExtension{}
 		if err := d.Decode(&ext); err != nil {
-			if err == io.EOF {
+			if stdErrors.Is(err, io.EOF) {
 				break
 			}
 			return objs, fmt.Errorf("failed to unmarshal manifest: %v", err)

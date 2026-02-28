@@ -200,7 +200,9 @@ func (f *ForceRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		log.Logger("webserver").Error("Failed encoding force run response", "error", err)
+	}
 }
 
 // Start starts the webserver using the given port, and sets up handlers for:

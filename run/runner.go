@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -118,6 +119,7 @@ func uniqueStrings(in []string) []string {
 		out[i] = v
 		i++
 	}
+	sort.Strings(out)
 	return out
 }
 

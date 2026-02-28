@@ -99,7 +99,10 @@ func main() {
 	log.SetLevel(*fLogLevel)
 
 	var slogLevel slog.Level
-	slogLevel.UnmarshalText([]byte(*fLogLevel))
+	if err := slogLevel.UnmarshalText([]byte(*fLogLevel)); err != nil {
+		log.Logger("kube-applier").Error("invalid log level", "logLevel", *fLogLevel, "error", err)
+		os.Exit(1)
+	}
 	ctrl.SetLogger(logr.FromSlogHandler(
 		slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 			Level: slogLevel,
