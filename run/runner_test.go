@@ -49,8 +49,17 @@ UUFBQUNEMnlBVGFaZHZGOXFvQU9QWnkrejBSaHI3dm1IdVZ3WldvUkFwYjhuZ3hLQUFBQUpCMm1j
 VlZkcG5GClZRQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDRDJ5QVRhWmR2Rjlxb0FPUFp5K3owUmhy
 N3ZtSHVWd1pXb1JBcGI4bmd4S0EKQUFBRUI1VDBoKzNGV0J0M0xaZXpyL00rZzd5Q2NtaHFjYWRQ
 V0dTRjltUDh1L21mYklCTnBsMjhYMnFnQTQ5bkw3UFJHRwp2dStZZTVYQmxhaEVDbHZ5ZURFb0FB
-QUFER0ZzYTJGeVFHdDFhbWx5WVFFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`)
+		QUFER0ZzYTJGeVFHdDFhbWx5WVFFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`)
 )
+
+const runHeavyIntegrationEnvVar = "RUN_HEAVY_INTEGRATION"
+
+func skipUnlessHeavyIntegration() {
+	if os.Getenv(runHeavyIntegrationEnvVar) == "1" {
+		return
+	}
+	Skip(fmt.Sprintf("set %s=1 to run this heavy integration spec", runHeavyIntegrationEnvVar))
+}
 
 func TestApplyOptions_pruneWhitelist(t *testing.T) {
 	assert := assert.New(t)
@@ -363,6 +372,8 @@ Some error output has been omitted because it may contain sensitive data
 
 	Context("When operating on a Waybill that defines a git ssh Secret", func() {
 		It("Should be able to use it to pull remote kustomize bases", func() {
+			skipUnlessHeavyIntegration()
+
 			// 1. app-b-kustomize-nokey
 			// 2. app-b-kustomize-notfound
 			// 3. app-b-kustomize-noaccess
@@ -611,6 +622,8 @@ deployment.apps/test-deployment created
 
 	Context("When operating on a Waybill that uses kustomize with no git secret it should fall back to KA ssh key", func() {
 		It("Should be able to build and apply", func() {
+			skipUnlessHeavyIntegration()
+
 			sshKey, err := os.CreateTemp("", "testGitSSHKey")
 			if err != nil {
 				panic(err)
@@ -673,6 +686,8 @@ deployment.apps/test-deployment created
 
 	Context("When operating on a Waybill that defines a strongbox keyring", func() {
 		It("Should be able to apply encrypted files, given a strongbox keyring secret", func() {
+			skipUnlessHeavyIntegration()
+
 			wbList := []*kubeapplierv1alpha1.Waybill{
 				{
 					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
@@ -892,6 +907,8 @@ deployment.apps/test-deployment created
 
 	Context("When operating on a Waybill that defines a Strongbox identity", func() {
 		It("Should be able to apply encrypted files, given a Strongbox identity Secret", func() {
+			skipUnlessHeavyIntegration()
+
 			wbList := []*kubeapplierv1alpha1.Waybill{
 				{
 					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},

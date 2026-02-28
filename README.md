@@ -405,6 +405,10 @@ ASSETS=$(setup-envtest --bin-dir "$ABS_BIN_DIR" use -p path 1.30.x)
 KUBEBUILDER_ASSETS="$ASSETS" CGO_ENABLED=1 go test -v -race -count=1 ./webserver/...
 ```
 
+Some long-running `run` integration specs are skipped by default to speed up
+local feedback loops. To include those heavy specs, set
+`RUN_HEAVY_INTEGRATION=1` when running `go test`.
+
 If you are writing tests, you might want to take a look at the
 [tutorial](https://book.kubebuilder.io/cronjob-tutorial/writing-tests.html),
 as well as the [`ginkgo`](http://onsi.github.io/ginkgo/) and
