@@ -183,7 +183,7 @@ func (r *Runner) processRequest(request Request) error {
 	delegateCfg.BearerToken = delegateToken
 	delegateKubeClient, err := client.NewWithConfig(delegateCfg)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create delegate kubernetes client: %w", err)
 	}
 	defer delegateKubeClient.Shutdown()
 	clusterResources, namespacedResources, err := delegateKubeClient.PrunableResourceGVKs(ctx, request.Waybill.Namespace)
@@ -218,7 +218,7 @@ func (r *Runner) processRequest(request Request) error {
 	// bases on kustomize build.
 	applyOptions.EnvironmentVariables = append(applyOptions.EnvironmentVariables, fmt.Sprintf("STRONGBOX_HOME=%s", tmpHomeDir))
 	if err := r.Strongbox.SetupGitConfigForStrongbox(ctx, request.Waybill, applyOptions.EnvironmentVariables); err != nil {
-		return err
+		return fmt.Errorf("failed setting up strongbox git config: %w", err)
 	}
 	r.apply(ctx, tmpRepoPath, delegateToken, request.Waybill, applyOptions)
 
@@ -422,7 +422,9 @@ func (r *Runner) updateRepoBaseAddresses(tmpRepoDir string) error {
 // to specific repositories (man ssh_config).
 func (r *Runner) setupGitSSH(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, tmpHomeDir string) (string, error) {
 	sshDir := filepath.Join(tmpHomeDir, ".ssh")
-	os.Mkdir(sshDir, 0700)
+	if err := os.Mkdir(sshDir, 0700); err != nil && !os.IsExist(err) {
+		return "", err
+	}
 	if waybill.Spec.GitSSHSecretRef == nil {
 		// If there is no SSH secret defined, fall back to using the one
 		// provided to kube-applier as a flag to clone the root repo.
