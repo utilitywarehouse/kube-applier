@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -611,12 +611,12 @@ deployment.apps/test-deployment created
 
 	Context("When operating on a Waybill that uses kustomize with no git secret it should fall back to KA ssh key", func() {
 		It("Should be able to build and apply", func() {
-			sshKey, err := ioutil.TempFile("", "testGitSSHKey")
+			sshKey, err := os.CreateTemp("", "testGitSSHKey")
 			if err != nil {
 				panic(err)
 			}
 			defer syscall.Unlink(sshKey.Name())
-			ioutil.WriteFile(sshKey.Name(), []byte(deployKey), 0700)
+			os.WriteFile(sshKey.Name(), []byte(deployKey), 0700)
 			runner.DefaultGitSSHKeyPath = sshKey.Name()
 
 			waybill := kubeapplierv1alpha1.Waybill{

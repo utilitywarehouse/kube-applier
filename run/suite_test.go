@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -69,7 +68,7 @@ var _ = BeforeSuite(func() {
 
 	// Create a token file with cluster admin permissions. This will be used
 	// as the delegate service account token when running tests.
-	tokenAuthFile, err = ioutil.TempFile("", "token-")
+	tokenAuthFile, err = os.CreateTemp("", "token-")
 	Expect(err).ToNot(HaveOccurred())
 	_, err = tokenAuthFile.Write([]byte(fmt.Sprintf("%s,admin-user,1123,system:masters", adminToken)))
 	Expect(err).ToNot(HaveOccurred())
