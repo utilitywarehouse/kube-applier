@@ -60,9 +60,9 @@ var _ = Describe("Scheduler", func() {
 		testRunQueue = make(chan Request)
 		testSchedulerRequests, testSchedulerRequestsWait = testSchedulerDrainRequests(testRunQueue)
 		testScheduler = Scheduler{
-			WaybillPollInterval: time.Second * 5,
+			WaybillPollInterval: 500 * time.Millisecond,
 			Clock:               &zeroClock{},
-			GitPollWait:         time.Second * 5,
+			GitPollWait:         500 * time.Millisecond,
 			KubeClient:          k8sClient,
 			Repository:          repo,
 			RepoPath:            "testdata/manifests",
@@ -89,7 +89,7 @@ var _ = Describe("Scheduler", func() {
 						Namespace: "foo",
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
-						RunInterval: 5,
+						RunInterval: 1,
 					},
 				},
 				{ // no runs should be triggered for this resource, with autoApply false
@@ -100,7 +100,7 @@ var _ = Describe("Scheduler", func() {
 					},
 					Spec: kubeapplierv1alpha1.WaybillSpec{
 						AutoApply:   ptr.To(false),
-						RunInterval: 5,
+						RunInterval: 1,
 					},
 				},
 			}
@@ -120,7 +120,7 @@ var _ = Describe("Scheduler", func() {
 			testEnsureWaybills(wbList)
 			testWaitForSchedulerToUpdate(&testScheduler, wbList)
 
-			t := time.Second*15 - time.Since(lastSyncedAt)
+			t := time.Second*4 - time.Since(lastSyncedAt)
 			if t > 0 {
 				log.Logger("test").Info("Sleeping for ~%v to record queued runs\n", t.Truncate(time.Second))
 				time.Sleep(t)
@@ -142,7 +142,7 @@ var _ = Describe("Scheduler", func() {
 			testEnsureWaybills(wbList)
 			testWaitForSchedulerToUpdate(&testScheduler, wbList)
 
-			t = time.Second*15 - time.Since(lastSyncedAt)
+			t = time.Second*4 - time.Since(lastSyncedAt)
 			if t > 0 {
 				log.Logger("test").Info("Sleeping for ~%v to record queued runs\n", t.Truncate(time.Second))
 				time.Sleep(t)
@@ -150,7 +150,7 @@ var _ = Describe("Scheduler", func() {
 
 			testWaitForRequests(testSchedulerRequests, MatchAllKeys(Keys{
 				"foo": MatchAllKeys(Keys{
-					// RunInterval is 5s and ~15s have elapsed until it is updated to 3600s.
+					// RunInterval is 1s and ~4s have elapsed until it is updated to 3600s.
 					ScheduledRun: BeNumerically(">=", 4),
 				}),
 				"bar": MatchAllKeys(Keys{
@@ -428,8 +428,8 @@ func testEnsureWaybills(wbList []*kubeapplierv1alpha1.Waybill) {
 func testWaitForSchedulerToUpdate(s *Scheduler, wbList []*kubeapplierv1alpha1.Waybill) {
 	Eventually(
 		testSchedulerCopyWaybillsMap(s),
-		time.Second*15,
-		time.Second,
+		time.Second*8,
+		100*time.Millisecond,
 	).Should(Equal(testSchedulerExpectedWaybillsMap(wbList)))
 }
 
@@ -445,8 +445,8 @@ func testWaitForRequests(actual func() []Request, expected gomegatypes.GomegaMat
 			}
 			return requestCount
 		},
-		time.Second*30,
-		time.Second,
+		time.Second*12,
+		100*time.Millisecond,
 	).Should(expected)
 }
 

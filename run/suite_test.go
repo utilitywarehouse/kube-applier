@@ -148,8 +148,8 @@ func testMetrics(regex []string) {
 			output = string(body)
 			return nil
 		},
-		time.Second*15,
-		time.Second,
+		time.Second*5,
+		100*time.Millisecond,
 	).Should(BeNil())
 	// remove any metrics that don't come from the metrics package to reduce
 	// output length in case of failures
@@ -197,8 +197,8 @@ func testRemoveAllWaybills() {
 			Expect(k8sClient.GetAPIReader().List(context.TODO(), &waybills)).To(BeNil())
 			return len(waybills.Items)
 		},
-		time.Second*60,
-		time.Second,
+		time.Second*20,
+		200*time.Millisecond,
 	).Should(Equal(0))
 }
 
@@ -215,8 +215,8 @@ func testMatchEvents(matchers []gomegatypes.GomegaMatcher) {
 			}
 			return events.Items, nil
 		},
-		time.Second*15,
-		time.Second,
+		time.Second*8,
+		100*time.Millisecond,
 	).Should(ContainElements(elements...))
 }
 
