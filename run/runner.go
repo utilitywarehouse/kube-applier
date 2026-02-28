@@ -361,21 +361,25 @@ func (r *Runner) setupRepositoryClone(ctx context.Context, waybill *kubeapplierv
 // .ssh/config
 func (r *Runner) updateRepoBaseAddresses(tmpRepoDir string) error {
 	kFiles := []string{}
-	filepath.WalkDir(tmpRepoDir, func(path string, info fs.DirEntry, err error) error {
+	if err := filepath.WalkDir(tmpRepoDir, func(path string, info fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 		if filepath.Base(path) == "kustomization.yaml" ||
 			filepath.Base(path) == "kustomization.yml" ||
 			filepath.Base(path) == "Kustomization" {
 			kFiles = append(kFiles, path)
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
 	for _, k := range kFiles {
 		var out []byte
 		in, err := os.Open(k)
 		if err != nil {
-			return nil
+			return err
 		}
-		defer in.Close()
 		keyName := ""
 		scanner := bufio.NewScanner(in)
 		for scanner.Scan() {
@@ -396,6 +400,13 @@ func (r *Runner) updateRepoBaseAddresses(tmpRepoDir string) error {
 			}
 			out = append(out, l...)
 			out = append(out, "\n"...)
+		}
+		if err := scanner.Err(); err != nil {
+			in.Close()
+			return err
+		}
+		if err := in.Close(); err != nil {
+			return err
 		}
 		if err := os.WriteFile(k, out, 0644); err != nil {
 			return err
