@@ -19,15 +19,6 @@ import (
 // Type defines what kind of apply run is performed.
 type Type int
 
-func typeFromString(s string) Type {
-	for i, v := range typeToString {
-		if s == v {
-			return Type(i)
-		}
-	}
-	return -1
-}
-
 func (t Type) String() string {
 	if int(t) >= len(typeToString) || int(t) < 0 {
 		return "Unknown run type"

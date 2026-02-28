@@ -482,7 +482,7 @@ func (r *Runner) constructSSHConfig(secret *corev1.Secret, sshDir, configFilenam
 			if !bytes.HasSuffix(v, []byte("\n")) {
 				v = append(v, byte('\n'))
 			}
-			keyFilename := filepath.Join(sshDir, fmt.Sprintf("%s", k))
+			keyFilename := filepath.Join(sshDir, k)
 			// We will use this in case there is only a single key
 			// for all hosts
 			kfn = keyFilename

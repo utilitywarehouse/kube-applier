@@ -229,17 +229,17 @@ func (ws *WebServer) Start() error {
 	m := mux.NewRouter()
 	addStatusEndpoints(m)
 	statusPageHandler := &StatusPageHandler{
-		ws.Authenticator,
-		ws.Clock,
-		ws.DiffURLFormat,
-		ws.KubeClient,
-		template,
-		ws.StatusTimeout,
+		Authenticator: ws.Authenticator,
+		Clock:         ws.Clock,
+		DiffURLFormat: ws.DiffURLFormat,
+		KubeClient:    ws.KubeClient,
+		Template:      template,
+		Timeout:       ws.StatusTimeout,
 	}
 	forceRunHandler := &ForceRunHandler{
-		ws.Authenticator,
-		ws.KubeClient,
-		ws.RunQueue,
+		Authenticator: ws.Authenticator,
+		KubeClient:    ws.KubeClient,
+		RunQueue:      ws.RunQueue,
 	}
 	m.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	m.PathPrefix("/api/v1/forceRun").Handler(forceRunHandler)

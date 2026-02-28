@@ -48,7 +48,7 @@ func waybillEvents(wb *kubeapplierv1alpha1.Waybill, allEvents []corev1.Event) []
 	return events
 }
 
-// Filtered stores collections of Namespaces with same outsome
+// Filtered stores collections of Namespaces with same outcome
 type Filtered struct {
 	FilteredBy string
 	Total      int

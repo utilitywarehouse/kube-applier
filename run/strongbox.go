@@ -74,12 +74,3 @@ func (s *Strongboxer) SetupGitConfigForStrongbox(ctx context.Context, waybill *k
 
 	return nil
 }
-
-// Mock Strongboxer for testing
-type mockStrongboxer struct {
-	strongboxBase
-}
-
-func (m *mockStrongboxer) SetupGitConfigForStrongbox(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, env []string) error {
-	return nil
-}

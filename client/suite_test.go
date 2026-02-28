@@ -29,7 +29,7 @@ var (
 func TestClient(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecs(t, "Run package suite")
+	RunSpecs(t, "Client package suite")
 }
 
 var _ = BeforeSuite(func() {

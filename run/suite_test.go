@@ -46,6 +46,14 @@ var (
 	adminToken    = "admintoken"
 )
 
+type mockStrongboxer struct {
+	strongboxBase
+}
+
+func (m *mockStrongboxer) SetupGitConfigForStrongbox(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, env []string) error {
+	return nil
+}
+
 func init() {
 	repoPath, _ := filepath.Abs("..")
 	repo, _ = git.NewRepository(repoPath, git.RepositoryConfig{Remote: "foo"}, git.SyncOptions{})
