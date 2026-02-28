@@ -35,7 +35,7 @@ KUBEBUILDER_VERSION="1.30.x"
 test:
 	command -v setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 	mkdir -p $(KUBEBUILDER_BINDIR)
-	ASSETS=$$(setup-envtest --bin-dir $(KUBEBUILDER_BINDIR) use -p path $(KUBEBUILDER_VERSION)); \
+	ASSETS=$$(realpath $$(setup-envtest --bin-dir $(KUBEBUILDER_BINDIR) use -p path $(KUBEBUILDER_VERSION))); \
 	KUBEBUILDER_ASSETS="$$ASSETS" CGO_ENABLED=1 go test -v -race -count=1 -cover ./...
 
 build:
