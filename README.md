@@ -409,6 +409,17 @@ Some long-running `run` integration specs are skipped by default to speed up
 local feedback loops. To include those heavy specs, set
 `RUN_HEAVY_INTEGRATION=1` when running `go test`.
 
+Strongbox-heavy integration specs are additionally gated behind
+`RUN_HEAVY_STRONGBOX=1`. This keeps the default heavy suite independent of a
+machine-specific strongbox git filter setup.
+
+Convenience targets:
+
+```bash
+make test-heavy              # RUN_HEAVY_INTEGRATION=1
+make test-heavy-strongbox    # RUN_HEAVY_INTEGRATION=1 RUN_HEAVY_STRONGBOX=1
+```
+
 If you are writing tests, you might want to take a look at the
 [tutorial](https://book.kubebuilder.io/cronjob-tutorial/writing-tests.html),
 as well as the [`ginkgo`](http://onsi.github.io/ginkgo/) and

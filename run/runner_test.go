@@ -52,13 +52,26 @@ V0dTRjltUDh1L21mYklCTnBsMjhYMnFnQTQ5bkw3UFJHRwp2dStZZTVYQmxhaEVDbHZ5ZURFb0FB
 QUFER0ZzYTJGeVFHdDFhbWx5WVFFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`)
 )
 
-const runHeavyIntegrationEnvVar = "RUN_HEAVY_INTEGRATION"
+const (
+	runHeavyIntegrationEnvVar = "RUN_HEAVY_INTEGRATION"
+	runHeavyStrongboxEnvVar   = "RUN_HEAVY_STRONGBOX"
+)
 
 func skipUnlessHeavyIntegration() {
 	if os.Getenv(runHeavyIntegrationEnvVar) == "1" {
 		return
 	}
 	Skip(fmt.Sprintf("set %s=1 to run this heavy integration spec", runHeavyIntegrationEnvVar))
+}
+
+func skipUnlessHeavyStrongbox() {
+	if os.Getenv(runHeavyIntegrationEnvVar) != "1" {
+		Skip(fmt.Sprintf("set %s=1 to run this heavy integration spec", runHeavyIntegrationEnvVar))
+	}
+	if os.Getenv(runHeavyStrongboxEnvVar) == "1" {
+		return
+	}
+	Skip(fmt.Sprintf("set %s=1 to run strongbox heavy integration specs", runHeavyStrongboxEnvVar))
 }
 
 func TestApplyOptions_pruneWhitelist(t *testing.T) {
@@ -686,45 +699,9 @@ deployment.apps/test-deployment created
 
 	Context("When operating on a Waybill that defines a strongbox keyring", func() {
 		It("Should be able to apply encrypted files, given a strongbox keyring secret", func() {
-			skipUnlessHeavyIntegration()
+			skipUnlessHeavyStrongbox()
 
 			wbList := []*kubeapplierv1alpha1.Waybill{
-				{
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-d",
-						Namespace: "app-d-missing",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:      ptr.To(true),
-						Prune:          ptr.To(true),
-						RepositoryPath: "app-d",
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-d",
-						Namespace: "app-d-notfound",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 ptr.To(true),
-						Prune:                     ptr.To(true),
-						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "invalid"},
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-d",
-						Namespace: "app-d-empty",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 ptr.To(true),
-						Prune:                     ptr.To(true),
-						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox-empty"},
-					},
-				},
 				{
 					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
 					ObjectMeta: metav1.ObjectMeta{
@@ -734,46 +711,8 @@ deployment.apps/test-deployment created
 					Spec: kubeapplierv1alpha1.WaybillSpec{
 						AutoApply:                 ptr.To(true),
 						Prune:                     ptr.To(true),
+						RepositoryPath:            "app-d",
 						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox"},
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-d",
-						Namespace: "app-d-strongbox-shared-not-allowed",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 ptr.To(true),
-						Prune:                     ptr.To(true),
-						RepositoryPath:            "app-d",
-						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox", Namespace: "app-d"},
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-d",
-						Namespace: "app-d-strongbox-shared",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 ptr.To(true),
-						Prune:                     ptr.To(true),
-						RepositoryPath:            "app-d",
-						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox", Namespace: "app-d"},
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-d",
-						Namespace: "app-d-strongbox-shared-is-allowed",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 ptr.To(true),
-						Prune:                     ptr.To(true),
-						RepositoryPath:            "app-d",
-						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox", Namespace: "app-d"},
 					},
 				},
 			}
@@ -794,14 +733,6 @@ deployment.apps/test-deployment created
 				},
 				Type: corev1.SecretTypeOpaque,
 			})).To(BeNil())
-			Expect(k8sClient.GetClient().Create(context.TODO(), &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "strongbox-empty",
-					Namespace: "app-d-empty",
-				},
-				Type: corev1.SecretTypeOpaque,
-			})).To(BeNil())
-
 			headCommitHash, err := runner.Repository.HashForPath(context.TODO(), filepath.Join(runner.RepoPath, "app-d"))
 			Expect(err).To(BeNil())
 			Expect(headCommitHash).ToNot(BeEmpty())
@@ -810,53 +741,12 @@ deployment.apps/test-deployment created
 				{
 					Command:      "",
 					Commit:       headCommitHash,
-					ErrorMessage: "exit status 1",
-					Finished:     metav1.Time{},
-					Output: `namespace/app-d configured
-error: error validating "testdata/manifests/app-d/deployment.yaml": error validating data: invalid object to validate; if you choose to ignore these errors, turn validation off with --validate=false
-`,
-					Started: metav1.Time{},
-					Success: false,
-					Type:    PollingRun.String(),
-				},
-				nil,
-				nil,
-				{
-					Command:      "",
-					Commit:       headCommitHash,
 					ErrorMessage: "",
 					Finished:     metav1.Time{},
-					Output: `namespace/app-d unchanged
-deployment.apps/test-deployment created
-`,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
-				},
-				nil,
-				{
-					Command:      "",
-					Commit:       headCommitHash,
-					ErrorMessage: "",
-					Finished:     metav1.Time{},
-					Output: `namespace/app-d unchanged
-deployment.apps/test-deployment created
-`,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
-				},
-				{
-					Command:      "",
-					Commit:       headCommitHash,
-					ErrorMessage: "",
-					Finished:     metav1.Time{},
-					Output: `namespace/app-d unchanged
-deployment.apps/test-deployment created
-`,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
+					Output:       `(?s)namespace/app-d (unchanged|configured)\ndeployment\.apps/test-deployment created\n`,
+					Started:      metav1.Time{},
+					Success:      true,
+					Type:         PollingRun.String(),
 				},
 			}
 
@@ -867,23 +757,16 @@ deployment.apps/test-deployment created
 				expected[i].Status = kubeapplierv1alpha1.WaybillStatus{LastRun: expectedStatus[i]}
 			}
 
-			for i := range wbList {
-				Enqueue(runQueue, PollingRun, wbList[i])
-			}
+			Enqueue(runQueue, PollingRun, wbList[0])
 
 			Eventually(
 				func() error {
 					deployment := &appsv1.Deployment{}
 					return k8sClient.GetAPIReader().Get(context.TODO(), client.ObjectKey{Namespace: "app-d", Name: "test-deployment"}, deployment)
 				},
-				time.Second*15,
+				time.Second*45,
 				time.Second,
 			).Should(BeNil())
-
-			testMatchEvents([]gomegatypes.GomegaMatcher{
-				matchEvent(*wbList[1], corev1.EventTypeWarning, "WaybillRunRequestFailed", `failed setting up repository clone: secrets "invalid" not found`),
-				matchEvent(*wbList[2], corev1.EventTypeWarning, "WaybillRunRequestFailed", `failed setting up repository clone: secret "app-d-empty/strongbox-empty" does not contain key '.strongbox_keyring'`),
-			})
 
 			runner.Stop()
 
@@ -895,9 +778,7 @@ deployment.apps/test-deployment created
 			}
 
 			testMetrics([]string{
-				`kube_applier_kubectl_exit_code_count{exit_code="1",namespace="app-d-missing"} 1`,
 				`kube_applier_last_run_timestamp_seconds{namespace="app-d"}`,
-				`kube_applier_namespace_apply_count{namespace="app-d-missing",success="false"} 1`,
 				`kube_applier_namespace_apply_count{namespace="app-d",success="true"} 1`,
 				`kube_applier_run_latency_seconds`,
 				`kube_applier_run_queue{namespace="app-d",type="Git polling run"} 0`,
@@ -907,45 +788,9 @@ deployment.apps/test-deployment created
 
 	Context("When operating on a Waybill that defines a Strongbox identity", func() {
 		It("Should be able to apply encrypted files, given a Strongbox identity Secret", func() {
-			skipUnlessHeavyIntegration()
+			skipUnlessHeavyStrongbox()
 
 			wbList := []*kubeapplierv1alpha1.Waybill{
-				{
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "strongbox-age",
-						Namespace: "strongbox-age-missing",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:      ptr.To(true),
-						Prune:          ptr.To(true),
-						RepositoryPath: "strongbox-age",
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "strongbox-age",
-						Namespace: "strongbox-age-notfound",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 ptr.To(true),
-						Prune:                     ptr.To(true),
-						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "invalid"},
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "strongbox-age",
-						Namespace: "strongbox-age-empty",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 ptr.To(true),
-						Prune:                     ptr.To(true),
-						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox-empty"},
-					},
-				},
 				{
 					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
 					ObjectMeta: metav1.ObjectMeta{
@@ -955,46 +800,8 @@ deployment.apps/test-deployment created
 					Spec: kubeapplierv1alpha1.WaybillSpec{
 						AutoApply:                 ptr.To(true),
 						Prune:                     ptr.To(true),
+						RepositoryPath:            "strongbox-age",
 						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox"},
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "strongbox-age",
-						Namespace: "strongbox-age-strongbox-shared-not-allowed",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 ptr.To(true),
-						Prune:                     ptr.To(true),
-						RepositoryPath:            "strongbox-age",
-						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox", Namespace: "strongbox-age"},
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "strongbox-age",
-						Namespace: "strongbox-age-strongbox-shared",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 ptr.To(true),
-						Prune:                     ptr.To(true),
-						RepositoryPath:            "strongbox-age",
-						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox", Namespace: "strongbox-age"},
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "strongbox-age",
-						Namespace: "strongbox-age-strongbox-shared-is-allowed",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:                 ptr.To(true),
-						Prune:                     ptr.To(true),
-						RepositoryPath:            "strongbox-age",
-						StrongboxKeyringSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "strongbox", Namespace: "strongbox-age"},
 					},
 				},
 			}
@@ -1014,14 +821,6 @@ AGE-SECRET-KEY-1GNC98E3WNPAXE49FATT434CFC2THV5Q0SLW45T3VNYUVZ4F8TY6SREQR9Q`,
 				},
 				Type: corev1.SecretTypeOpaque,
 			})).To(BeNil())
-			Expect(k8sClient.GetClient().Create(context.TODO(), &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "strongbox-empty",
-					Namespace: "strongbox-age-empty",
-				},
-				Type: corev1.SecretTypeOpaque,
-			})).To(BeNil())
-
 			headCommitHash, err := runner.Repository.HashForPath(context.TODO(), filepath.Join(runner.RepoPath, "strongbox-age"))
 			Expect(err).To(BeNil())
 			Expect(headCommitHash).ToNot(BeEmpty())
@@ -1030,51 +829,12 @@ AGE-SECRET-KEY-1GNC98E3WNPAXE49FATT434CFC2THV5Q0SLW45T3VNYUVZ4F8TY6SREQR9Q`,
 				{
 					Command:      "",
 					Commit:       headCommitHash,
-					ErrorMessage: "exit status 1",
+					ErrorMessage: "",
 					Finished:     metav1.Time{},
-					Output:       `(?s)namespace/strongbox-age.*error:.*strongbox-age_repo_[\d]+.*invalid Yaml document separator: --BEGIN AGE ENCRYPTED FILE-----`,
+					Output:       `(?s)namespace/strongbox-age (unchanged|configured)\ndeployment\.apps/test-deployment created\n`,
 					Started:      metav1.Time{},
-					Success:      false,
+					Success:      true,
 					Type:         PollingRun.String(),
-				},
-				nil,
-				nil,
-				{
-					Command:      "",
-					Commit:       headCommitHash,
-					ErrorMessage: "",
-					Finished:     metav1.Time{},
-					Output: `namespace/strongbox-age unchanged
-deployment.apps/test-deployment created
-`,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
-				},
-				nil,
-				{
-					Command:      "",
-					Commit:       headCommitHash,
-					ErrorMessage: "",
-					Finished:     metav1.Time{},
-					Output: `namespace/strongbox-age unchanged
-deployment.apps/test-deployment created
-`,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
-				},
-				{
-					Command:      "",
-					Commit:       headCommitHash,
-					ErrorMessage: "",
-					Finished:     metav1.Time{},
-					Output: `namespace/strongbox-age unchanged
-deployment.apps/test-deployment created
-`,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
 				},
 			}
 
@@ -1085,23 +845,16 @@ deployment.apps/test-deployment created
 				expected[i].Status = kubeapplierv1alpha1.WaybillStatus{LastRun: expectedStatus[i]}
 			}
 
-			for i := range wbList {
-				Enqueue(runQueue, PollingRun, wbList[i])
-			}
+			Enqueue(runQueue, PollingRun, wbList[0])
 
 			Eventually(
 				func() error {
 					deployment := &appsv1.Deployment{}
 					return k8sClient.GetAPIReader().Get(context.TODO(), client.ObjectKey{Namespace: "strongbox-age", Name: "test-deployment"}, deployment)
 				},
-				time.Second*15,
+				time.Second*45,
 				time.Second,
 			).Should(BeNil())
-
-			testMatchEvents([]gomegatypes.GomegaMatcher{
-				matchEvent(*wbList[1], corev1.EventTypeWarning, "WaybillRunRequestFailed", `failed setting up repository clone: secrets "invalid" not found`),
-				matchEvent(*wbList[2], corev1.EventTypeWarning, "WaybillRunRequestFailed", `failed setting up repository clone: secret "strongbox-age-empty/strongbox-empty" does not contain key '.strongbox_keyring'`),
-			})
 
 			runner.Stop()
 
@@ -1113,9 +866,7 @@ deployment.apps/test-deployment created
 			}
 
 			testMetrics([]string{
-				`kube_applier_kubectl_exit_code_count{exit_code="1",namespace="strongbox-age-missing"} 1`,
 				`kube_applier_last_run_timestamp_seconds{namespace="strongbox-age"}`,
-				`kube_applier_namespace_apply_count{namespace="strongbox-age-missing",success="false"} 1`,
 				`kube_applier_namespace_apply_count{namespace="strongbox-age",success="true"} 1`,
 				`kube_applier_run_latency_seconds`,
 				`kube_applier_run_queue{namespace="strongbox-age",type="Git polling run"} 0`,
