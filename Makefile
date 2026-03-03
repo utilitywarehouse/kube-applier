@@ -8,7 +8,7 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-.PHONY: manifests generate controller-gen-install test build run release
+.PHONY: manifests generate controller-gen-install test test-heavy test-heavy-strongbox build run release
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen-install
@@ -35,8 +35,20 @@ KUBEBUILDER_VERSION="1.30.x"
 test:
 	command -v setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 	mkdir -p $(KUBEBUILDER_BINDIR)
-	ASSETS=$$(setup-envtest --bin-dir $(KUBEBUILDER_BINDIR) use -p path $(KUBEBUILDER_VERSION)); \
+	ASSETS=$$(realpath $$(setup-envtest --bin-dir $(KUBEBUILDER_BINDIR) use -p path $(KUBEBUILDER_VERSION))); \
 	KUBEBUILDER_ASSETS="$$ASSETS" CGO_ENABLED=1 go test -v -race -count=1 -cover ./...
+
+test-heavy:
+	command -v setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	mkdir -p $(KUBEBUILDER_BINDIR)
+	ASSETS=$$(realpath $$(setup-envtest --bin-dir $(KUBEBUILDER_BINDIR) use -p path $(KUBEBUILDER_VERSION))); \
+	RUN_HEAVY_INTEGRATION=1 KUBEBUILDER_ASSETS="$$ASSETS" CGO_ENABLED=1 go test -v -count=1 ./run/...
+
+test-heavy-strongbox:
+	command -v setup-envtest || go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	mkdir -p $(KUBEBUILDER_BINDIR)
+	ASSETS=$$(realpath $$(setup-envtest --bin-dir $(KUBEBUILDER_BINDIR) use -p path $(KUBEBUILDER_VERSION))); \
+	RUN_HEAVY_INTEGRATION=1 RUN_HEAVY_STRONGBOX=1 KUBEBUILDER_ASSETS="$$ASSETS" CGO_ENABLED=1 go test -v -count=1 ./run/...
 
 build:
 	docker build -t kube-applier .

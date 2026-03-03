@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"github.com/utilitywarehouse/kube-applier/client"
 	"github.com/utilitywarehouse/kube-applier/git"
 	"github.com/utilitywarehouse/kube-applier/kubectl"
+	"github.com/utilitywarehouse/kube-applier/kustomizeutil"
 	"github.com/utilitywarehouse/kube-applier/log"
 	"github.com/utilitywarehouse/kube-applier/metrics"
 	"github.com/utilitywarehouse/kube-applier/sysutil"
@@ -33,6 +35,7 @@ import (
 const (
 	defaultRunnerWorkerCount = 2
 	defaultWorkerQueueSize   = 512
+	enqueueTimeout           = 5 * time.Second
 
 	hostFragment = `Host %s_github_com
     HostName github.com
@@ -118,6 +121,7 @@ func uniqueStrings(in []string) []string {
 		out[i] = v
 		i++
 	}
+	sort.Strings(out)
 	return out
 }
 
@@ -183,7 +187,7 @@ func (r *Runner) processRequest(request Request) error {
 	delegateCfg.BearerToken = delegateToken
 	delegateKubeClient, err := client.NewWithConfig(delegateCfg)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not create delegate kubernetes client: %w", err)
 	}
 	defer delegateKubeClient.Shutdown()
 	clusterResources, namespacedResources, err := delegateKubeClient.PrunableResourceGVKs(ctx, request.Waybill.Namespace)
@@ -218,7 +222,7 @@ func (r *Runner) processRequest(request Request) error {
 	// bases on kustomize build.
 	applyOptions.EnvironmentVariables = append(applyOptions.EnvironmentVariables, fmt.Sprintf("STRONGBOX_HOME=%s", tmpHomeDir))
 	if err := r.Strongbox.SetupGitConfigForStrongbox(ctx, request.Waybill, applyOptions.EnvironmentVariables); err != nil {
-		return err
+		return fmt.Errorf("failed setting up strongbox git config: %w", err)
 	}
 	r.apply(ctx, tmpRepoPath, delegateToken, request.Waybill, applyOptions)
 
@@ -231,9 +235,18 @@ func (r *Runner) processRequest(request Request) error {
 	}
 
 	if request.Waybill.Status.LastRun.Success {
-		log.Logger("runner").Debug(fmt.Sprintf("Apply run output for %s:\n%s\n%s", wbId, request.Waybill.Status.LastRun.Command, request.Waybill.Status.LastRun.Output))
+		log.Logger("runner").Debug(
+			"Apply run output",
+			"waybill", wbId,
+			"command", request.Waybill.Status.LastRun.Command,
+			"output", request.Waybill.Status.LastRun.Output,
+		)
 	} else {
-		log.Logger("runner").Warn(fmt.Sprintf("Apply run for %s encountered errors:\n%s", wbId, request.Waybill.Status.LastRun.ErrorMessage))
+		log.Logger("runner").Warn(
+			"Apply run encountered errors",
+			"waybill", wbId,
+			"errorMessage", request.Waybill.Status.LastRun.ErrorMessage,
+		)
 	}
 
 	metrics.UpdateFromLastRun(request.Waybill)
@@ -361,21 +374,23 @@ func (r *Runner) setupRepositoryClone(ctx context.Context, waybill *kubeapplierv
 // .ssh/config
 func (r *Runner) updateRepoBaseAddresses(tmpRepoDir string) error {
 	kFiles := []string{}
-	filepath.WalkDir(tmpRepoDir, func(path string, info fs.DirEntry, err error) error {
-		if filepath.Base(path) == "kustomization.yaml" ||
-			filepath.Base(path) == "kustomization.yml" ||
-			filepath.Base(path) == "Kustomization" {
+	if err := filepath.WalkDir(tmpRepoDir, func(path string, info fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if kustomizeutil.IsKustomizationFileName(filepath.Base(path)) {
 			kFiles = append(kFiles, path)
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
 	for _, k := range kFiles {
 		var out []byte
 		in, err := os.Open(k)
 		if err != nil {
-			return nil
+			return err
 		}
-		defer in.Close()
 		keyName := ""
 		scanner := bufio.NewScanner(in)
 		for scanner.Scan() {
@@ -397,6 +412,13 @@ func (r *Runner) updateRepoBaseAddresses(tmpRepoDir string) error {
 			out = append(out, l...)
 			out = append(out, "\n"...)
 		}
+		if err := scanner.Err(); err != nil {
+			in.Close()
+			return err
+		}
+		if err := in.Close(); err != nil {
+			return err
+		}
 		if err := os.WriteFile(k, out, 0644); err != nil {
 			return err
 		}
@@ -411,7 +433,9 @@ func (r *Runner) updateRepoBaseAddresses(tmpRepoDir string) error {
 // to specific repositories (man ssh_config).
 func (r *Runner) setupGitSSH(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, tmpHomeDir string) (string, error) {
 	sshDir := filepath.Join(tmpHomeDir, ".ssh")
-	os.Mkdir(sshDir, 0700)
+	if err := os.Mkdir(sshDir, 0700); err != nil && !os.IsExist(err) {
+		return "", err
+	}
 	if waybill.Spec.GitSSHSecretRef == nil {
 		// If there is no SSH secret defined, fall back to using the one
 		// provided to kube-applier as a flag to clone the root repo.
@@ -467,7 +491,7 @@ func (r *Runner) constructSSHConfig(secret *corev1.Secret, sshDir, configFilenam
 			if !bytes.HasSuffix(v, []byte("\n")) {
 				v = append(v, byte('\n'))
 			}
-			keyFilename := filepath.Join(sshDir, fmt.Sprintf("%s", k))
+			keyFilename := filepath.Join(sshDir, k)
 			// We will use this in case there is only a single key
 			// for all hosts
 			kfn = keyFilename
@@ -544,7 +568,7 @@ func Enqueue(queue chan<- Request, t Type, waybill *kubeapplierv1alpha1.Waybill)
 	case queue <- Request{Type: t, Waybill: waybill}:
 		log.Logger("runner").Debug("Run queued", "waybill", wbId, "type", t)
 		metrics.UpdateRunRequest(t.String(), waybill, 1)
-	case <-time.After(5 * time.Second):
+	case <-time.After(enqueueTimeout):
 		log.Logger("runner").Error("Timed out trying to queue a run, run queue is full", "waybill", wbId, "type", t)
 		metrics.AddRunRequestQueueFailure(t.String(), waybill)
 	}

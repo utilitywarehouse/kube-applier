@@ -15,7 +15,22 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Run full test suite
+        run: make test
+      - name: Run heavy integration suite
+        run: make test-heavy
+
   docker:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

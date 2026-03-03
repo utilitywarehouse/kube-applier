@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -47,6 +46,14 @@ var (
 	adminToken    = "admintoken"
 )
 
+type mockStrongboxer struct {
+	strongboxBase
+}
+
+func (m *mockStrongboxer) SetupGitConfigForStrongbox(ctx context.Context, waybill *kubeapplierv1alpha1.Waybill, env []string) error {
+	return nil
+}
+
 func init() {
 	repoPath, _ := filepath.Abs("..")
 	repo, _ = git.NewRepository(repoPath, git.RepositoryConfig{Remote: "foo"}, git.SyncOptions{})
@@ -69,7 +76,7 @@ var _ = BeforeSuite(func() {
 
 	// Create a token file with cluster admin permissions. This will be used
 	// as the delegate service account token when running tests.
-	tokenAuthFile, err = ioutil.TempFile("", "token-")
+	tokenAuthFile, err = os.CreateTemp("", "token-")
 	Expect(err).ToNot(HaveOccurred())
 	_, err = tokenAuthFile.Write([]byte(fmt.Sprintf("%s,admin-user,1123,system:masters", adminToken)))
 	Expect(err).ToNot(HaveOccurred())
@@ -149,8 +156,8 @@ func testMetrics(regex []string) {
 			output = string(body)
 			return nil
 		},
-		time.Second*15,
-		time.Second,
+		time.Second*5,
+		100*time.Millisecond,
 	).Should(BeNil())
 	// remove any metrics that don't come from the metrics package to reduce
 	// output length in case of failures
@@ -198,8 +205,8 @@ func testRemoveAllWaybills() {
 			Expect(k8sClient.GetAPIReader().List(context.TODO(), &waybills)).To(BeNil())
 			return len(waybills.Items)
 		},
-		time.Second*60,
-		time.Second,
+		time.Second*20,
+		200*time.Millisecond,
 	).Should(Equal(0))
 }
 
@@ -216,8 +223,8 @@ func testMatchEvents(matchers []gomegatypes.GomegaMatcher) {
 			}
 			return events.Items, nil
 		},
-		time.Second*15,
-		time.Second,
+		time.Second*8,
+		100*time.Millisecond,
 	).Should(ContainElements(elements...))
 }
 

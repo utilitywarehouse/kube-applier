@@ -117,6 +117,7 @@ func (f *ForceRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Result  string `json:"result"`
 		Message string `json:"message"`
 	}
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	switch r.Method {
 	case "POST":
@@ -199,8 +200,9 @@ func (f *ForceRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
-	w.Header().Set("Content-Type", "waybill/json; charset=UTF-8")
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		log.Logger("webserver").Error("Failed encoding force run response", "error", err)
+	}
 }
 
 // Start starts the webserver using the given port, and sets up handlers for:
@@ -227,17 +229,17 @@ func (ws *WebServer) Start() error {
 	m := mux.NewRouter()
 	addStatusEndpoints(m)
 	statusPageHandler := &StatusPageHandler{
-		ws.Authenticator,
-		ws.Clock,
-		ws.DiffURLFormat,
-		ws.KubeClient,
-		template,
-		ws.StatusTimeout,
+		Authenticator: ws.Authenticator,
+		Clock:         ws.Clock,
+		DiffURLFormat: ws.DiffURLFormat,
+		KubeClient:    ws.KubeClient,
+		Template:      template,
+		Timeout:       ws.StatusTimeout,
 	}
 	forceRunHandler := &ForceRunHandler{
-		ws.Authenticator,
-		ws.KubeClient,
-		ws.RunQueue,
+		Authenticator: ws.Authenticator,
+		KubeClient:    ws.KubeClient,
+		RunQueue:      ws.RunQueue,
 	}
 	m.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	m.PathPrefix("/api/v1/forceRun").Handler(forceRunHandler)

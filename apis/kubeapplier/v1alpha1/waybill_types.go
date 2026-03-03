@@ -102,7 +102,7 @@ type WaybillStatusRun struct {
 	// Commit is the git commit hash on which this apply run operated.
 	Commit string `json:"commit"`
 
-	// ErrorMessage describes any errors that occured during the apply run.
+	// ErrorMessage describes any errors that occurred during the apply run.
 	ErrorMessage string `json:"errorMessage"`
 
 	// Finished is the time that the apply run finished applying this Waybill.

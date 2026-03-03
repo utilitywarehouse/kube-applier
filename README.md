@@ -391,9 +391,34 @@ ensure that your config files are using your intended context.
 Tests are written primarily using the `envtest` package of the
 [controller-runtime](https://godoc.org/github.com/kubernetes-sigs/controller-runtime/)
 project. Run `make test` to pull the required binary assets and run the tests.
-Once the assets are present in `./testbin` you can invoke `go test` manually
-if you need a particular set of flags, but first you need to point envtest to
-the binaries: `export KUBEBUILDER_ASSETS=$PWD/testbin/bin`.
+
+If you need to run package-level `go test` commands directly, make sure
+`KUBEBUILDER_ASSETS` is set to an absolute path. A relative path may fail when
+the test process changes package directories.
+
+For example:
+
+```bash
+ABS_BIN_DIR="$(pwd)/kubebuilder-bindir"
+mkdir -p "$ABS_BIN_DIR"
+ASSETS=$(setup-envtest --bin-dir "$ABS_BIN_DIR" use -p path 1.30.x)
+KUBEBUILDER_ASSETS="$ASSETS" CGO_ENABLED=1 go test -v -race -count=1 ./webserver/...
+```
+
+Some long-running `run` integration specs are skipped by default to speed up
+local feedback loops. To include those heavy specs, set
+`RUN_HEAVY_INTEGRATION=1` when running `go test`.
+
+Strongbox-heavy integration specs are additionally gated behind
+`RUN_HEAVY_STRONGBOX=1`. This keeps the default heavy suite independent of a
+machine-specific strongbox git filter setup.
+
+Convenience targets:
+
+```bash
+make test-heavy              # RUN_HEAVY_INTEGRATION=1
+make test-heavy-strongbox    # RUN_HEAVY_INTEGRATION=1 RUN_HEAVY_STRONGBOX=1
+```
 
 If you are writing tests, you might want to take a look at the
 [tutorial](https://book.kubebuilder.io/cronjob-tutorial/writing-tests.html),

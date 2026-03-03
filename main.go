@@ -36,7 +36,7 @@ var (
 	fOidcClientID        = flag.String("oidc-client-id", getStringEnv("OIDC_CLIENT_ID", ""), "Client ID of the OIDC application")
 	fOidcClientSecret    = flag.String("oidc-client-secret", getStringEnv("OIDC_CLIENT_SECRET", ""), "Client secret of the OIDC application")
 	fOidcIssuer          = flag.String("oidc-issuer", getStringEnv("OIDC_ISSUER", ""), "OIDC issuer URL of the authentication server")
-	fPruneBlacklist      = flag.String("prune-blacklist", getStringEnv("PRUNE_BLACKLIST", ""), "Comma-seperated list of resources to add to the global prune blacklist, in the <group>/<version>/<kind> format")
+	fPruneBlacklist      = flag.String("prune-blacklist", getStringEnv("PRUNE_BLACKLIST", ""), "Comma-separated list of resources to add to the global prune blacklist, in the <group>/<version>/<kind> format")
 	fRepoBranch          = flag.String("repo-branch", getStringEnv("REPO_BRANCH", "master"), "Branch of the git repository to use")
 	fRepoDepth           = flag.Int("repo-depth", getIntEnv("REPO_DEPTH", 0), "Depth of the git repository to fetch. Use zero to ignore")
 	fRepoDest            = flag.String("repo-dest", getStringEnv("REPO_DEST", "/src"), "Path under which the the git repository is fetched")
@@ -99,7 +99,10 @@ func main() {
 	log.SetLevel(*fLogLevel)
 
 	var slogLevel slog.Level
-	slogLevel.UnmarshalText([]byte(*fLogLevel))
+	if err := slogLevel.UnmarshalText([]byte(*fLogLevel)); err != nil {
+		log.Logger("kube-applier").Error("invalid log level", "logLevel", *fLogLevel, "error", err)
+		os.Exit(1)
+	}
 	ctrl.SetLogger(logr.FromSlogHandler(
 		slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 			Level: slogLevel,
@@ -207,7 +210,7 @@ func main() {
 		StatusTimeout: *fStatusTimeout,
 	}
 	if err := webserver.Start(); err != nil {
-		log.Logger("kube-applier").Error(fmt.Sprintf("Cannot start webserver: %v", err))
+		log.Logger("kube-applier").Error("Cannot start webserver", "error", err)
 		os.Exit(1)
 	}
 
@@ -215,7 +218,7 @@ func main() {
 	<-ctx.Done()
 	log.Logger("kube-applier").Info("Interrupted, shutting down...")
 	if err := webserver.Shutdown(); err != nil {
-		log.Logger("kube-applier").Error(fmt.Sprintf("Cannot shutdown webserver: %v", err))
+		log.Logger("kube-applier").Error("Cannot shutdown webserver", "error", err)
 	}
 	repo.StopSync()
 	scheduler.Stop()

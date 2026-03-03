@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"slices"
-	"sort"
 	"strings"
 
 	authorizationv1 "k8s.io/api/authorization/v1"
@@ -170,8 +169,15 @@ func (c *Client) ListWaybillEvents(ctx context.Context) ([]corev1.Event, error) 
 			events = append(events, e)
 		}
 	}
-	sort.Slice(events, func(i, j int) bool {
-		return events[i].LastTimestamp.Before(&events[j].LastTimestamp)
+	slices.SortStableFunc(events, func(a, b corev1.Event) int {
+		if a.LastTimestamp.Before(&b.LastTimestamp) {
+			return -1
+		}
+		if b.LastTimestamp.Before(&a.LastTimestamp) {
+			return 1
+		}
+
+		return 0
 	})
 
 	return events, nil
@@ -188,8 +194,13 @@ func (c *Client) ListWaybills(ctx context.Context) ([]kubeapplierv1alpha1.Waybil
 	for i, wb := range waybills.Items {
 		sortedWaybills[i] = wb
 	}
-	sort.Slice(sortedWaybills, func(i, j int) bool {
-		return sortedWaybills[i].Namespace+sortedWaybills[i].Name < sortedWaybills[j].Namespace+sortedWaybills[j].Name
+	slices.SortFunc(sortedWaybills, func(a, b kubeapplierv1alpha1.Waybill) int {
+		ns := strings.Compare(a.Namespace, b.Namespace)
+		if ns != 0 {
+			return ns
+		}
+
+		return strings.Compare(a.Name, b.Name)
 	})
 
 	unique := map[string]kubeapplierv1alpha1.Waybill{}
@@ -206,8 +217,8 @@ func (c *Client) ListWaybills(ctx context.Context) ([]kubeapplierv1alpha1.Waybil
 		ret[i] = wb
 		i++
 	}
-	sort.Slice(ret, func(i, j int) bool {
-		return ret[i].Namespace < ret[j].Namespace
+	slices.SortFunc(ret, func(a, b kubeapplierv1alpha1.Waybill) int {
+		return strings.Compare(a.Namespace, b.Namespace)
 	})
 	return ret, nil
 }

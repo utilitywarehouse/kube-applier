@@ -5,6 +5,7 @@ package kubectl
 import (
 	"bytes"
 	"context"
+	stdErrors "errors"
 	"fmt"
 	"io"
 	"os"
@@ -19,6 +20,7 @@ import (
 	kubeyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/yaml"
 
+	"github.com/utilitywarehouse/kube-applier/kustomizeutil"
 	"github.com/utilitywarehouse/kube-applier/metrics"
 )
 
@@ -31,6 +33,8 @@ var (
 	// Used in sanitiseCmdStr
 	sanitiseCmdStrRe = regexp.MustCompile(`--token=[\S]+`)
 )
+
+const cmdWaitDelay = 5 * time.Second
 
 func sanitiseCmdStr(cmdStr string) string {
 	return sanitiseCmdStrRe.ReplaceAllString(cmdStr, "--token=<omitted>")
@@ -105,15 +109,7 @@ func NewClient(host, label, kubeCtlPath string, kubeCtlOpts []string) *Client {
 // Apply attempts to "kubectl apply" the files located at path. It returns the
 // full apply command and its output.
 func (c *Client) Apply(ctx context.Context, path string, options ApplyOptions) (string, string, error) {
-	var kustomize bool
-	if _, err := os.Stat(path + "/kustomization.yaml"); err == nil {
-		kustomize = true
-	} else if _, err := os.Stat(path + "/kustomization.yml"); err == nil {
-		kustomize = true
-	} else if _, err := os.Stat(path + "/Kustomization"); err == nil {
-		kustomize = true
-	}
-	if kustomize {
+	if kustomizeutil.HasKustomizationFile(path) {
 		cmd, out, err := c.applyKustomize(ctx, path, options)
 		return sanitiseCmdStr(cmd), out, err
 	}
@@ -150,7 +146,7 @@ func (c *Client) applyKustomize(ctx context.Context, path string, options ApplyO
 
 	kustomizeCmd := exec.CommandContext(ctx, "kustomize", "build", path)
 	// force kill command 5 seconds after sending it sigterm (when ctx is cancelled/timed out)
-	kustomizeCmd.WaitDelay = 5 * time.Second
+	kustomizeCmd.WaitDelay = cmdWaitDelay
 
 	options.setCommandEnvironment(kustomizeCmd)
 	kustomizeCmd.Stdout = &kustomizeStdout
@@ -253,7 +249,7 @@ func (c *Client) apply(ctx context.Context, path string, stdin []byte, options A
 
 	kubectlCmd := exec.CommandContext(ctx, c.KubeCtlPath, args...)
 	// force kill command 5 seconds after sending it sigterm (when ctx is cancelled/timed out)
-	kubectlCmd.WaitDelay = 5 * time.Second
+	kubectlCmd.WaitDelay = cmdWaitDelay
 	options.setCommandEnvironment(kubectlCmd)
 	if path == "-" {
 		if len(stdin) == 0 {
@@ -332,7 +328,7 @@ func splitYAML(yamlData []byte) ([]*unstructured.Unstructured, error) {
 	for {
 		ext := runtime.RawExtension{}
 		if err := d.Decode(&ext); err != nil {
-			if err == io.EOF {
+			if stdErrors.Is(err, io.EOF) {
 				break
 			}
 			return objs, fmt.Errorf("failed to unmarshal manifest: %v", err)

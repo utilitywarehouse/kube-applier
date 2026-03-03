@@ -23,6 +23,11 @@ var (
 	gitExecutablePath string
 )
 
+const (
+	cmdWaitDelay = 5 * time.Second
+	gcInterval   = 24 * time.Hour
+)
+
 func init() {
 	gitExecutablePath = exec.Command("git").String()
 }
@@ -132,7 +137,7 @@ func (r *Repository) syncLoop() {
 	ticker := time.NewTicker(r.syncOptions.Interval)
 	defer ticker.Stop()
 
-	gcTicker := time.NewTicker(24 * time.Hour)
+	gcTicker := time.NewTicker(gcInterval)
 	defer gcTicker.Stop()
 
 	log.Logger("repository").Info("started repository sync loop", "interval", r.syncOptions.Interval)
@@ -182,7 +187,7 @@ func (r *Repository) runGitCommand(ctx context.Context, environment []string, cw
 		cmd.Dir = cwd
 	}
 	// force kill git & child process 5 seconds after sending it sigterm (when ctx is cancelled/timed out)
-	cmd.WaitDelay = 5 * time.Second
+	cmd.WaitDelay = cmdWaitDelay
 
 	outbuf := bytes.NewBuffer(nil)
 	errbuf := bytes.NewBuffer(nil)
@@ -359,9 +364,6 @@ func (r *Repository) CloneLocal(ctx context.Context, environment []string, dst, 
 	}
 
 	// git clone --no-checkout src dst
-	//
-	// Uncomment and use the following if running a Docker build with rootless Docker
-	//if _, err := r.runGitCommand(ctx, nil, "", "clone", "--no-checkout", "--no-hardlinks", r.path, dst); err != nil {
 	if _, err := r.runGitCommand(ctx, nil, "", "clone", "--no-checkout", r.path, dst); err != nil {
 		return "", err
 	}
