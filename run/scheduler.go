@@ -163,58 +163,77 @@ func (s *Scheduler) gitPollingLoop() {
 	for {
 		select {
 		case <-time.After(s.GitPollWait):
-			s.processGitChanges()
+			for _, wb := range s.waybillsWithGitChanges() {
+				Enqueue(s.RunQueue, PollingRun, wb)
+			}
 		case <-s.stop:
 			return
 		}
 	}
 }
 
-func (s *Scheduler) processGitChanges() {
+// waybillsWithGitChanges returns Waybills whose repository path has
+// changed since their last recorded commit. It updates gitLastQueuedHash
+// under the lock and returns a slice of affected Waybills so that callers
+// can enqueue runs outside the lock, avoiding blocking channel sends while
+// holding waybillsMutex.
+//
+// This check prevents the Scheduler from queueing multiple runs for a
+// Waybill; without it, when a new commit appears a Waybill will be eligible
+// for a new run until it finishes and its status is updated.
+// Waybills that are not in the Scheduler's cache when a new commit appears
+// will not be retroactively checked against the latest commit when they are
+// acknowledged. This is acceptable, since they will (eventually) trigger a
+// scheduled run.
+func (s *Scheduler) waybillsWithGitChanges() []*kubeapplierv1alpha1.Waybill {
 	ctx, cancel := context.WithTimeout(context.Background(), gitPollTimeout)
 	defer cancel()
 
 	hash, err := s.Repository.HashForPath(ctx, s.RepoPath)
 	if err != nil {
 		log.Logger("scheduler").Warn("Git polling could not get HEAD hash", "error", err)
-		return
+		return nil
 	}
-	// This check prevents the Scheduler from queueing multiple runs for
-	// a Waybill; without this check, when a new commit appears it will
-	// be eligible for new a run until it finishes the run and its
-	// status is updated.
-	// Waybills that are not in the Scheduler's cache when a new commit
-	// appears will not be retroactively checked against the latest
-	// commit when they are acknowledged. This is acceptable, since they
-	// will (eventually) trigger a scheduled run.
+
 	s.waybillsMutex.Lock()
-	defer s.waybillsMutex.Unlock()
 	if hash == s.gitLastQueuedHash {
-		return
+		s.waybillsMutex.Unlock()
+		return nil
 	}
+	// Reserve this hash before doing any slow checks so a concurrent call does
+	// not process the same commit again.
+	s.gitLastQueuedHash = hash
+	waybills := make([]*kubeapplierv1alpha1.Waybill, 0, len(s.waybills))
+	for _, wb := range s.waybills {
+		waybills = append(waybills, wb)
+	}
+	s.waybillsMutex.Unlock()
+
 	log.Logger("scheduler").Debug("New HEAD hash detected, checking for Waybills that need to be applied", "hash", hash)
-	for i := range s.waybills {
+
+	var result []*kubeapplierv1alpha1.Waybill
+	for i := range waybills {
 		// If LastRun is nil, we don't trigger the Polling run at all
 		// and instead rely on the Scheduled run to kickstart things.
-		if s.waybills[i].Status.LastRun != nil && s.waybills[i].Status.LastRun.Commit != hash {
-			sinceHash := s.waybills[i].Status.LastRun.Commit
-			path := s.waybills[i].Spec.RepositoryPath
-			if path == "" {
-				path = s.waybills[i].Namespace
-			}
-			wbId := fmt.Sprintf("%s/%s", s.waybills[i].Namespace, s.waybills[i].Name)
-			changed, err := s.Repository.HasChangesForPath(ctx, filepath.Join(s.RepoPath, path), sinceHash)
-			if err != nil {
-				log.Logger("scheduler").Warn("Could not check path for changes, skipping polling run", "waybill", wbId, "path", path, "since", sinceHash, "error", err)
-				continue
-			}
-			if !changed {
-				continue
-			}
-			Enqueue(s.RunQueue, PollingRun, s.waybills[i])
+		if waybills[i].Status.LastRun == nil || waybills[i].Status.LastRun.Commit == hash {
+			continue
+		}
+		sinceHash := waybills[i].Status.LastRun.Commit
+		path := waybills[i].Spec.RepositoryPath
+		if path == "" {
+			path = waybills[i].Namespace
+		}
+		wbId := fmt.Sprintf("%s/%s", waybills[i].Namespace, waybills[i].Name)
+		changed, err := s.Repository.HasChangesForPath(ctx, filepath.Join(s.RepoPath, path), sinceHash)
+		if err != nil {
+			log.Logger("scheduler").Warn("Could not check path for changes, skipping polling run", "waybill", wbId, "path", path, "since", sinceHash, "error", err)
+			continue
+		}
+		if changed {
+			result = append(result, waybills[i])
 		}
 	}
-	s.gitLastQueuedHash = hash
+	return result
 }
 
 func (s *Scheduler) newWaybillLoop(waybill *kubeapplierv1alpha1.Waybill) func() {

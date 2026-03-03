@@ -24,8 +24,10 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - name: Run full test suite (including heavy integration)
-        run: RUN_HEAVY_INTEGRATION=1 make test
+      - name: Run full test suite
+        run: make test
+      - name: Run heavy integration suite
+        run: make test-heavy
 
   docker:
     needs: test
