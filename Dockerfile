@@ -1,11 +1,11 @@
-FROM golang:1.25-alpine AS build
+FROM golang:1.26-alpine AS build
 
 WORKDIR /src
 
 RUN apk --no-cache add git gcc make musl-dev curl bash openssh-client
 
 ENV \
-  KUBECTL_VERSION=v1.35.0 \
+  KUBECTL_VERSION=v1.36.1 \
   KUSTOMIZE_VERSION=v5.7.1 \
   STRONGBOX_VERSION=2.1.0
 
