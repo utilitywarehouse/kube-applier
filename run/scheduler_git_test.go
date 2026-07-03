@@ -149,6 +149,27 @@ func TestWaybillsWithGitChanges(t *testing.T) {
 		assert.Equal(t, "scheduler-polling-app-a-kustomize", result[0].Namespace)
 	})
 
+	t.Run("returns Waybill with empty Commit in LastRun", func(t *testing.T) {
+		s := makeScheduler(map[string]*kubeapplierv1alpha1.Waybill{
+			"empty-commit": {
+				ObjectMeta: metav1.ObjectMeta{Namespace: "empty-commit"},
+				Spec: kubeapplierv1alpha1.WaybillSpec{
+					RepositoryPath: "app-a",
+				},
+				Status: kubeapplierv1alpha1.WaybillStatus{
+					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+						Commit:   "",
+						Started:  now,
+						Finished: now,
+					},
+				},
+			},
+		}, "")
+		result := s.waybillsWithGitChanges()
+		require.Len(t, result, 1)
+		assert.Equal(t, "empty-commit", result[0].Namespace)
+	})
+
 	t.Run("returns only changed Waybills from a mixed set", func(t *testing.T) {
 		s := makeScheduler(map[string]*kubeapplierv1alpha1.Waybill{
 			"no-last-run": {

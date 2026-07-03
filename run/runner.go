@@ -287,12 +287,23 @@ func (r *Runner) updateWaybillStatusRequestFailure(req Request, errorMessage str
 	wbId := fmt.Sprintf("%s/%s", req.Waybill.Namespace, req.Waybill.Name)
 	wb, err := r.KubeClient.GetWaybill(ctx, req.Waybill.Namespace, req.Waybill.Name)
 	if err != nil {
+		// GetWaybill returns a nil Waybill on error, so we cannot continue
+		// to build a status update below without dereferencing nil.
 		log.Logger("runner").Error("Cannot get waybill to capture request error", "waybill", wbId, "error", err)
+		return
+	}
+	// Preserve the previous LastRun.Commit so a pre-apply failure does
+	// not clobber a known-good commit hash with "". The empty commit
+	// would cause the scheduler's git polling loop to feed "" to
+	// git diff, which git rejects with "fatal: bad revision ''".
+	prevCommit := ""
+	if wb.Status.LastRun != nil {
+		prevCommit = wb.Status.LastRun.Commit
 	}
 	t := r.Clock.Now()
 	wb.Status.LastRun = &kubeapplierv1alpha1.WaybillStatusRun{
 		Command:      "",
-		Commit:       "",
+		Commit:       prevCommit,
 		Output:       "",
 		ErrorMessage: errorMessage,
 		Finished:     metav1.NewTime(t),
