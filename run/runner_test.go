@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -52,26 +53,13 @@ V0dTRjltUDh1L21mYklCTnBsMjhYMnFnQTQ5bkw3UFJHRwp2dStZZTVYQmxhaEVDbHZ5ZURFb0FB
 QUFER0ZzYTJGeVFHdDFhbWx5WVFFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`)
 )
 
-const (
-	runHeavyIntegrationEnvVar = "RUN_HEAVY_INTEGRATION"
-	runHeavyStrongboxEnvVar   = "RUN_HEAVY_STRONGBOX"
-)
-
-func skipUnlessHeavyIntegration() {
-	if os.Getenv(runHeavyIntegrationEnvVar) == "1" {
-		return
+// skipUnlessStrongbox skips specs that rely on the strongbox binary (used as a
+// git filter to decrypt the encrypted fixtures) when it is not installed on
+// PATH. Everything else in this suite always runs.
+func skipUnlessStrongbox() {
+	if _, err := exec.LookPath("strongbox"); err != nil {
+		Skip("strongbox binary not found on PATH; skipping strongbox spec")
 	}
-	Skip(fmt.Sprintf("set %s=1 to run this heavy integration spec", runHeavyIntegrationEnvVar))
-}
-
-func skipUnlessHeavyStrongbox() {
-	if os.Getenv(runHeavyIntegrationEnvVar) != "1" {
-		Skip(fmt.Sprintf("set %s=1 to run this heavy integration spec", runHeavyIntegrationEnvVar))
-	}
-	if os.Getenv(runHeavyStrongboxEnvVar) == "1" {
-		return
-	}
-	Skip(fmt.Sprintf("set %s=1 to run strongbox heavy integration specs", runHeavyStrongboxEnvVar))
 }
 
 func TestApplyOptions_pruneWhitelist(t *testing.T) {
@@ -385,8 +373,6 @@ Some error output has been omitted because it may contain sensitive data
 
 	Context("When operating on a Waybill that defines a git ssh Secret", func() {
 		It("Should be able to use it to pull remote kustomize bases", func() {
-			skipUnlessHeavyIntegration()
-
 			// 1. app-b-kustomize-nokey
 			// 2. app-b-kustomize-notfound
 			// 3. app-b-kustomize-noaccess
@@ -635,8 +621,6 @@ deployment.apps/test-deployment created
 
 	Context("When operating on a Waybill that uses kustomize with no git secret it should fall back to KA ssh key", func() {
 		It("Should be able to build and apply", func() {
-			skipUnlessHeavyIntegration()
-
 			sshKey, err := os.CreateTemp("", "testGitSSHKey")
 			if err != nil {
 				panic(err)
@@ -699,7 +683,7 @@ deployment.apps/test-deployment created
 
 	Context("When operating on a Waybill that defines a strongbox keyring", func() {
 		It("Should be able to apply encrypted files, given a strongbox keyring secret", func() {
-			skipUnlessHeavyStrongbox()
+			skipUnlessStrongbox()
 
 			wbList := []*kubeapplierv1alpha1.Waybill{
 				{
@@ -788,7 +772,7 @@ deployment.apps/test-deployment created
 
 	Context("When operating on a Waybill that defines a Strongbox identity", func() {
 		It("Should be able to apply encrypted files, given a Strongbox identity Secret", func() {
-			skipUnlessHeavyStrongbox()
+			skipUnlessStrongbox()
 
 			wbList := []*kubeapplierv1alpha1.Waybill{
 				{
