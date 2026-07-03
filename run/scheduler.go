@@ -219,6 +219,16 @@ func (s *Scheduler) waybillsWithGitChanges() []*kubeapplierv1alpha1.Waybill {
 			continue
 		}
 		sinceHash := waybills[i].Status.LastRun.Commit
+		if sinceHash == "" {
+			// Empty Commit indicates a prior pre-apply failure corrupted
+			// the status. Enqueue a run to repair it rather than feeding
+			// "" to git diff. Best-effort: gated on HEAD moving (see the
+			// gitLastQueuedHash guard above), so autoApply Waybills also
+			// self-heal via the Scheduled run, but autoApply-disabled ones
+			// need a ForcedRun since Enqueue drops everything else.
+			result = append(result, waybills[i])
+			continue
+		}
 		path := waybills[i].Spec.RepositoryPath
 		if path == "" {
 			path = waybills[i].Namespace
