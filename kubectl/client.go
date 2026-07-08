@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -220,14 +221,14 @@ func (c *Client) applyKustomize(ctx context.Context, path string, options ApplyO
 		secretsOptions := options
 		secretsOptions.PruneWhitelist = secretsPruneWhitelist
 
-		_, out, err := c.apply(ctx, "-", secrets, secretsOptions)
+		_, secretsOut, err := c.apply(ctx, "-", secrets, secretsOptions)
 		if err != nil {
-			// Don't append the actual output, as the error output
-			// from kubectl can leak the content of secrets
-			kubectlOut = kubectlOut + omitErrOutputMessage
+			// Don't include kubectl's output — it can echo back Secret values.
+			// Surface the names of the affected Secrets instead.
+			kubectlOut = kubectlOut + secretsErrMessage(secrets)
 			return cmdStr, kubectlOut, err
 		}
-		kubectlOut = kubectlOut + out
+		kubectlOut = kubectlOut + secretsOut
 	}
 
 	return cmdStr, kubectlOut, nil
@@ -282,6 +283,32 @@ func filterErrOutput(out string) string {
 	}
 
 	return out
+}
+
+// secretsErrMessage returns a message identifying the Secret(s) whose apply
+// failed. kubectl's raw error output is not included because it can echo back
+// Secret values. If the manifest cannot be parsed we fall back to the generic
+// omission message.
+func secretsErrMessage(secrets []byte) string {
+	objs, err := splitYAML(secrets)
+	if err != nil {
+		return omitErrOutputMessage
+	}
+	var names []string
+	for _, obj := range objs {
+		name := obj.GetName()
+		if ns := obj.GetNamespace(); ns != "" {
+			name = ns + "/" + name
+		}
+		if name != "" {
+			names = append(names, name)
+		}
+	}
+	if len(names) == 0 {
+		return omitErrOutputMessage
+	}
+	sort.Strings(names)
+	return fmt.Sprintf("Error applying Secret(s) [%s]; kubectl output has been omitted as it may contain sensitive data.\n", strings.Join(names, ", "))
 }
 
 // splitSecrets will take a yaml file and separate the resources into Secrets
