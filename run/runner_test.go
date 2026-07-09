@@ -346,7 +346,7 @@ deployment.apps/test-deployment created (server dry run)
 					Finished:     metav1.Time{},
 					Output: `namespace/app-a-kustomize configured
 deployment.apps/test-deployment created
-Some error output has been omitted because it may contain sensitive data
+Error applying Secret(s) [-invalid]; kubectl output has been omitted as it may contain sensitive data.
 `,
 					Started: metav1.Time{},
 					Success: false,
