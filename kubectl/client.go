@@ -223,8 +223,10 @@ func (c *Client) applyKustomize(ctx context.Context, path string, options ApplyO
 
 		_, secretsOut, err := c.apply(ctx, "-", secrets, secretsOptions)
 		if err != nil {
-			// Don't include kubectl's output — it can echo back Secret values.
-			// Surface the names of the affected Secrets instead.
+			// Don't include kubectl's output — on a failed apply kubectl
+			// echoes a "bigger context" window of the raw manifest JSON,
+			// which can include Secret data field values. Surface only the
+			// names of the affected Secrets instead.
 			kubectlOut = kubectlOut + secretsErrMessage(secrets)
 			return cmdStr, kubectlOut, err
 		}
@@ -289,6 +291,26 @@ func filterErrOutput(out string) string {
 // failed. kubectl's raw error output is not included because it can echo back
 // Secret values. If the manifest cannot be parsed we fall back to the generic
 // omission message.
+//
+// secrets is the multi-document YAML produced by splitSecrets — the subset of
+// the kustomize build output that contains only Secret resources, separated by
+// "---", for example:
+//
+//	apiVersion: v1
+//	kind: Secret
+//	metadata:
+//	  name: db-creds
+//	  namespace: example-ns
+//	data:
+//	  password: c2VjcmV0
+//	---
+//	apiVersion: v1
+//	kind: Secret
+//	metadata:
+//	  name: api-token
+//	  namespace: example-ns
+//	stringData:
+//	  token: my-plaintext-token-value
 func secretsErrMessage(secrets []byte) string {
 	objs, err := splitYAML(secrets)
 	if err != nil {
