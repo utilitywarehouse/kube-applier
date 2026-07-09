@@ -105,6 +105,76 @@ The request is invalid: patch: Invalid value: "map[data:map[invalid:map[]] metad
 	}
 }
 
+func TestSecretsErrMessage(t *testing.T) {
+	testCases := []struct {
+		name    string
+		secrets []byte
+		want    string
+	}{
+		{
+			name: "includes namespace-qualified names of all Secrets",
+			secrets: []byte(`apiVersion: v1
+kind: Secret
+metadata:
+  name: db-creds
+  namespace: example-ns
+data:
+  password: c2VjcmV0
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-token
+  namespace: example-ns
+stringData:
+  token: my-plaintext-token-value
+`),
+			want: "Error applying Secret(s) [example-ns/api-token, example-ns/db-creds]; kubectl output has been omitted as it may contain sensitive data.\n",
+		},
+		{
+			name: "works for a Secret with no namespace",
+			secrets: []byte(`apiVersion: v1
+kind: Secret
+metadata:
+  name: bare-secret
+data:
+  key: dmFsdWU=
+`),
+			want: "Error applying Secret(s) [bare-secret]; kubectl output has been omitted as it may contain sensitive data.\n",
+		},
+		{
+			name: "falls back to generic message when Secret YAML has no metadata.name",
+			secrets: []byte(`apiVersion: v1
+kind: Secret
+metadata:
+  namespace: example-ns
+data:
+  key: dmFsdWU=
+`),
+			want: omitErrOutputMessage,
+		},
+		{
+			name:    "falls back to generic message when secrets cannot be parsed",
+			secrets: []byte("this: is: not: valid: yaml:\n  - {["),
+			want:    omitErrOutputMessage,
+		},
+		{
+			name:    "falls back to generic message for empty input",
+			secrets: []byte{},
+			want:    omitErrOutputMessage,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := secretsErrMessage(tc.secrets)
+			if diff := deep.Equal(got, tc.want); diff != nil {
+				t.Error(diff)
+			}
+		})
+	}
+}
+
 func TestApplyOptionsArgs(t *testing.T) {
 	testCases := []struct {
 		options ApplyOptions
