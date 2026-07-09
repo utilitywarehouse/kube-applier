@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 	"github.com/utilitywarehouse/kube-applier/client"
 )
@@ -21,6 +23,21 @@ const cmdWaitDelay = 5 * time.Second
 var encryptedValuePrefixes = []string{
 	"# STRONGBOX ENCRYPTED RESOURCE ;",
 	"-----BEGIN AGE ENCRYPTED FILE-----",
+}
+
+// verifyKeyringNotEncrypted returns an error if any value in the keyring
+// Secret's Data still carries a strongbox/age ciphertext prefix, meaning
+// the secret-store operator did not decrypt it before kube-applier read it.
+// Best-effort heuristic: it only catches known ciphertext markers.
+func verifyKeyringNotEncrypted(secret *corev1.Secret) error {
+	for k, v := range secret.Data {
+		for _, prefix := range encryptedValuePrefixes {
+			if strings.HasPrefix(string(v), prefix) {
+				return fmt.Errorf("strongbox keyring Secret %s/%s key %q appears to still be encrypted; check that it has been decrypted before use", secret.Namespace, secret.Name, k)
+			}
+		}
+	}
+	return nil
 }
 
 // strongboxInterface holds functions to configure strongbox for waybill runs
@@ -46,12 +63,8 @@ func (sb *strongboxBase) SetupStrongboxKeyring(ctx context.Context, kubeClient *
 	if err := checkSecretIsAllowed(waybill, secret); err != nil {
 		return err
 	}
-	for k, v := range secret.Data {
-		for _, prefix := range encryptedValuePrefixes {
-			if strings.HasPrefix(string(v), prefix) {
-				return fmt.Errorf("strongbox keyring Secret %s/%s key %q appears to still be encrypted; check that it has been decrypted before use", secret.Namespace, secret.Name, k)
-			}
-		}
+	if err := verifyKeyringNotEncrypted(secret); err != nil {
+		return err
 	}
 	keyring, ok1 := secret.Data[".strongbox_keyring"]
 	if ok1 {

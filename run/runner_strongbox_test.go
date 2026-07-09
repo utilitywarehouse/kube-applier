@@ -1,8 +1,6 @@
 package run
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,7 +14,7 @@ import (
 func TestVerifyKeyringNotEncrypted(t *testing.T) {
 	makeSecret := func(data map[string][]byte) *corev1.Secret {
 		return &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "strongbox-keyring", Namespace: "example-ns"},
+			ObjectMeta: metav1.ObjectMeta{Name: "strongbox_keyring", Namespace: "example-ns"},
 			Data:       data,
 		}
 	}
@@ -24,45 +22,37 @@ func TestVerifyKeyringNotEncrypted(t *testing.T) {
 	tests := []struct {
 		name    string
 		secret  *corev1.Secret
-		wantErr bool
+		wantErr string
 	}{
 		{
 			name:    "plaintext keyring passes",
 			secret:  makeSecret(map[string][]byte{".strongbox_keyring": []byte("keyid: abc123\n")}),
-			wantErr: false,
+			wantErr: "",
 		},
 		{
 			name:    "strongbox SIV-encrypted keyring is rejected",
 			secret:  makeSecret(map[string][]byte{".strongbox_keyring": []byte("# STRONGBOX ENCRYPTED RESOURCE ; some-ciphertext")}),
-			wantErr: true,
+			wantErr: `strongbox keyring Secret example-ns/strongbox_keyring key ".strongbox_keyring" appears to still be encrypted; check that it has been decrypted before use`,
 		},
 		{
 			name:    "age-armored keyring is rejected",
 			secret:  makeSecret(map[string][]byte{".strongbox_identity": []byte("-----BEGIN AGE ENCRYPTED FILE-----\nsome-ciphertext\n-----END AGE ENCRYPTED FILE-----")}),
-			wantErr: true,
+			wantErr: `strongbox keyring Secret example-ns/strongbox_keyring key ".strongbox_identity" appears to still be encrypted; check that it has been decrypted before use`,
 		},
 		{
 			name:    "empty secret passes",
 			secret:  makeSecret(nil),
-			wantErr: false,
+			wantErr: "",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			// Replicate the loop added to SetupStrongboxKeyring.
-			var err error
-			for k, v := range tc.secret.Data {
-				for _, prefix := range encryptedValuePrefixes {
-					if strings.HasPrefix(string(v), prefix) {
-						err = fmt.Errorf("strongbox keyring Secret %s/%s key %q appears to still be encrypted", tc.secret.Namespace, tc.secret.Name, k)
-					}
-				}
-			}
-			if tc.wantErr {
-				assert.Error(t, err)
-			} else {
+			err := verifyKeyringNotEncrypted(tc.secret)
+			if tc.wantErr == "" {
 				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tc.wantErr)
 			}
 		})
 	}
