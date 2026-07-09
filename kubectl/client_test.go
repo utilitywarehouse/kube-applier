@@ -143,6 +143,17 @@ data:
 			want: "Error applying Secret(s) [bare-secret]; kubectl output has been omitted as it may contain sensitive data.\n",
 		},
 		{
+			name: "falls back to generic message when Secret YAML has no metadata.name",
+			secrets: []byte(`apiVersion: v1
+kind: Secret
+metadata:
+  namespace: example-ns
+data:
+  key: dmFsdWU=
+`),
+			want: omitErrOutputMessage,
+		},
+		{
 			name:    "falls back to generic message when secrets cannot be parsed",
 			secrets: []byte("this: is: not: valid: yaml:\n  - {["),
 			want:    omitErrOutputMessage,

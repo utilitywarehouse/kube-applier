@@ -319,12 +319,13 @@ func secretsErrMessage(secrets []byte) string {
 	var names []string
 	for _, obj := range objs {
 		name := obj.GetName()
+		if name == "" {
+			continue
+		}
 		if ns := obj.GetNamespace(); ns != "" {
 			name = ns + "/" + name
 		}
-		if name != "" {
-			names = append(names, name)
-		}
+		names = append(names, name)
 	}
 	if len(names) == 0 {
 		return omitErrOutputMessage
