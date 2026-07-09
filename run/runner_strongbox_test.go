@@ -1,6 +1,8 @@
 package run
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +12,61 @@ import (
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 )
+
+func TestVerifyKeyringNotEncrypted(t *testing.T) {
+	makeSecret := func(data map[string][]byte) *corev1.Secret {
+		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "strongbox-keyring", Namespace: "example-ns"},
+			Data:       data,
+		}
+	}
+
+	tests := []struct {
+		name    string
+		secret  *corev1.Secret
+		wantErr bool
+	}{
+		{
+			name:    "plaintext keyring passes",
+			secret:  makeSecret(map[string][]byte{".strongbox_keyring": []byte("keyid: abc123\n")}),
+			wantErr: false,
+		},
+		{
+			name:    "strongbox SIV-encrypted keyring is rejected",
+			secret:  makeSecret(map[string][]byte{".strongbox_keyring": []byte("# STRONGBOX ENCRYPTED RESOURCE ; some-ciphertext")}),
+			wantErr: true,
+		},
+		{
+			name:    "age-armored keyring is rejected",
+			secret:  makeSecret(map[string][]byte{".strongbox_identity": []byte("-----BEGIN AGE ENCRYPTED FILE-----\nsome-ciphertext\n-----END AGE ENCRYPTED FILE-----")}),
+			wantErr: true,
+		},
+		{
+			name:    "empty secret passes",
+			secret:  makeSecret(nil),
+			wantErr: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Replicate the loop added to SetupStrongboxKeyring.
+			var err error
+			for k, v := range tc.secret.Data {
+				for _, prefix := range encryptedValuePrefixes {
+					if strings.HasPrefix(string(v), prefix) {
+						err = fmt.Errorf("strongbox keyring Secret %s/%s key %q appears to still be encrypted", tc.secret.Namespace, tc.secret.Name, k)
+					}
+				}
+			}
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
 
 func TestCheckSecretIsAllowed(t *testing.T) {
 	tests := []struct {
