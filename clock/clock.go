@@ -1,6 +1,6 @@
-// Package sysutil provides interfaces for working with the filesystem, go
-// templates and a Clock interface for time-related functions.
-package sysutil
+// Package clock provides a Clock interface and a concrete implementation
+// wrapping the standard time library for time-related functions.
+package clock
 
 import "time"
 

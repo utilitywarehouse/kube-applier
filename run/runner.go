@@ -24,12 +24,12 @@ import (
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 	"github.com/utilitywarehouse/kube-applier/client"
+	"github.com/utilitywarehouse/kube-applier/clock"
 	"github.com/utilitywarehouse/kube-applier/git"
 	"github.com/utilitywarehouse/kube-applier/kubectl"
 	"github.com/utilitywarehouse/kube-applier/kustomizeutil"
 	"github.com/utilitywarehouse/kube-applier/log"
 	"github.com/utilitywarehouse/kube-applier/metrics"
-	"github.com/utilitywarehouse/kube-applier/sysutil"
 )
 
 const (
@@ -128,7 +128,7 @@ func uniqueStrings(in []string) []string {
 // Runner manages the full process of an apply run, including getting the
 // appropriate files, running apply commands on them, and handling the results.
 type Runner struct {
-	Clock                sysutil.ClockInterface
+	Clock                clock.ClockInterface
 	DefaultGitSSHKeyPath string
 	DryRun               bool
 	KubeClient           *client.Client

@@ -27,6 +27,7 @@ import (
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 	"github.com/utilitywarehouse/kube-applier/client"
+	"github.com/utilitywarehouse/kube-applier/envtestassets"
 	"github.com/utilitywarehouse/kube-applier/git"
 	"github.com/utilitywarehouse/kube-applier/log"
 	// +kubebuilder:scaffold:imports
@@ -59,6 +60,10 @@ func init() {
 	repo, _ = git.NewRepository(repoPath, git.RepositoryConfig{Remote: "foo"}, git.SyncOptions{})
 	//Disable truncating of tests output
 	gomegaformat.MaxLength = 0
+}
+
+func TestMain(m *testing.M) {
+	envtestassets.Main(m)
 }
 
 func TestAPIs(t *testing.T) {

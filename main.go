@@ -15,11 +15,11 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/utilitywarehouse/kube-applier/client"
+	"github.com/utilitywarehouse/kube-applier/clock"
 	"github.com/utilitywarehouse/kube-applier/git"
 	"github.com/utilitywarehouse/kube-applier/kubectl"
 	"github.com/utilitywarehouse/kube-applier/log"
 	"github.com/utilitywarehouse/kube-applier/run"
-	"github.com/utilitywarehouse/kube-applier/sysutil"
 	"github.com/utilitywarehouse/kube-applier/webserver"
 	"github.com/utilitywarehouse/kube-applier/webserver/oidc"
 )
@@ -109,7 +109,7 @@ func main() {
 		}),
 	))
 
-	clock := &sysutil.Clock{}
+	clk := &clock.Clock{}
 
 	var (
 		oidcAuthenticator *oidc.Authenticator
@@ -175,7 +175,7 @@ func main() {
 	}
 
 	runner := &run.Runner{
-		Clock:                clock,
+		Clock:                clk,
 		DefaultGitSSHKeyPath: *fGitSSHKeyPath,
 		DryRun:               *fDryRun,
 		KubeClient:           kubeClient,
@@ -190,7 +190,7 @@ func main() {
 	runQueue := runner.Start()
 
 	scheduler := &run.Scheduler{
-		Clock:               clock,
+		Clock:               clk,
 		GitPollWait:         *fGitPollWait,
 		KubeClient:          kubeClient,
 		Repository:          repo,
@@ -202,7 +202,7 @@ func main() {
 
 	webserver := &webserver.WebServer{
 		Authenticator: oidcAuthenticator,
-		Clock:         clock,
+		Clock:         clk,
 		DiffURLFormat: *fDiffURLFormat,
 		KubeClient:    kubeClient,
 		ListenPort:    *fListenPort,

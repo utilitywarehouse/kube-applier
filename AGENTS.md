@@ -13,30 +13,25 @@ runs in. Entry point is `main.go`; the core packages are:
 - `git/` — repository polling and change detection
 - `client/` — Kubernetes client wrappers
 - `apis/` — the `Waybill` CRD types
-- `kubectl/`, `kustomizeutil/`, `webserver/`, `metrics/`, `sysutil/`, `log/`
+- `kubectl/`, `kustomizeutil/`, `webserver/`, `metrics/`, `clock/`, `envtestassets/`, `log/`
 
-## Testing — use the Makefile, not `go test` directly
+## Testing
 
-The `run` package tests use envtest, which needs kube control-plane binaries
-(etcd/kube-apiserver). Running `go test ./run/...` directly fails with
-`fork/exec /usr/local/kubebuilder/bin/etcd: no such file or directory` because
-`KUBEBUILDER_ASSETS` is unset.
-
-`make test` handles this: it installs `setup-envtest`, downloads the binaries
-into `./kubebuilder-bindir` (gitignored), exports `KUBEBUILDER_ASSETS`, and runs
-the whole suite with `-race` and coverage. This is the single target for
-everything; CI runs it too.
+`go test -race -count=1 -cover ./...` works standalone — no Make target or
+env vars required. The `envtestassets` package (called from `TestMain` in the
+`run`, `client` and `webserver` suites) lazily fetches etcd/kube-apiserver
+binaries via `setup-envtest` when `KUBEBUILDER_ASSETS` is unset, caching them
+in `./kubebuilder-bindir` (gitignored). `make test` still works as a
+convenience wrapper.
 
 Notes:
-- A few specs need the `strongbox` binary on PATH (it decrypts fixtures via a git
-  filter). They self-skip when it's missing, so you don't need strongbox
+- A few specs need the `strongbox` binary on PATH (it decrypts fixtures via a
+  git filter). They self-skip when it's missing, so you don't need strongbox
   installed to run the suite.
 - First run needs network access to fetch the envtest assets; later runs reuse
   the cache in `kubebuilder-bindir`.
-- envtest is pinned to `KUBEBUILDER_VERSION` (currently `1.30.x`) in the Makefile,
-  independent of the runtime kubectl version.
-- Pure unit tests that don't touch envtest (e.g. `TestWaybillsWithGitChanges`)
-  can be run with plain `go test -run ...`, but when in doubt use `make test`.
+- envtest is pinned to `1.30.x` (see `envtestassets.Version`), independent of
+  the runtime kubectl version.
 
 ## Codegen
 

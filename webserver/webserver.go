@@ -17,9 +17,9 @@ import (
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 	"github.com/utilitywarehouse/kube-applier/client"
+	"github.com/utilitywarehouse/kube-applier/clock"
 	"github.com/utilitywarehouse/kube-applier/log"
 	"github.com/utilitywarehouse/kube-applier/run"
-	"github.com/utilitywarehouse/kube-applier/sysutil"
 	"github.com/utilitywarehouse/kube-applier/webserver/oidc"
 )
 
@@ -30,7 +30,7 @@ const (
 // WebServer struct
 type WebServer struct {
 	Authenticator *oidc.Authenticator
-	Clock         sysutil.ClockInterface
+	Clock         clock.ClockInterface
 	DiffURLFormat string
 	KubeClient    *client.Client
 	ListenPort    int
@@ -44,7 +44,7 @@ type WebServer struct {
 // page with info about the most recent applier run.
 type StatusPageHandler struct {
 	Authenticator *oidc.Authenticator
-	Clock         sysutil.ClockInterface
+	Clock         clock.ClockInterface
 	DiffURLFormat string
 	KubeClient    *client.Client
 	Template      *template.Template
