@@ -309,7 +309,7 @@ func (r *Repository) gitCleanup(ctx context.Context) error {
 
 	gitRepoPath := filepath.Join(r.path, ".git")
 	// GC clone
-	if _, err := r.runGitCommand(ctx, nil, r.path, "gc", "--prune=all"); err != nil {
+	if _, err := r.runGitCommand(ctx, nil, r.path, "gc"); err != nil {
 		commitGraphLock := filepath.Join(gitRepoPath, "objects/info/commit-graph.lock")
 		if strings.Contains(err.Error(), fmt.Sprintf("Unable to create '%s': File exists.", commitGraphLock)) {
 			if e := os.Remove(commitGraphLock); e != nil {
