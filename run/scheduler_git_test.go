@@ -170,6 +170,27 @@ func TestWaybillsWithGitChanges(t *testing.T) {
 		assert.Equal(t, "empty-commit", result[0].Namespace)
 	})
 
+	t.Run("returns Waybill when HasChangesForPath fails (pruned commit)", func(t *testing.T) {
+		s := makeScheduler(map[string]*kubeapplierv1alpha1.Waybill{
+			"pruned-commit": {
+				ObjectMeta: metav1.ObjectMeta{Namespace: "pruned-commit"},
+				Spec: kubeapplierv1alpha1.WaybillSpec{
+					RepositoryPath: "app-a",
+				},
+				Status: kubeapplierv1alpha1.WaybillStatus{
+					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+						Commit:   "nonexistentdeadbeef",
+						Started:  now,
+						Finished: now,
+					},
+				},
+			},
+		}, "")
+		result := s.waybillsWithGitChanges()
+		require.Len(t, result, 1)
+		assert.Equal(t, "pruned-commit", result[0].Namespace)
+	})
+
 	t.Run("returns only changed Waybills from a mixed set", func(t *testing.T) {
 		s := makeScheduler(map[string]*kubeapplierv1alpha1.Waybill{
 			"no-last-run": {

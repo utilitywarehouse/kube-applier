@@ -38,7 +38,7 @@ var (
 	fOidcIssuer          = flag.String("oidc-issuer", getStringEnv("OIDC_ISSUER", ""), "OIDC issuer URL of the authentication server")
 	fPruneBlacklist      = flag.String("prune-blacklist", getStringEnv("PRUNE_BLACKLIST", ""), "Comma-separated list of resources to add to the global prune blacklist, in the <group>/<version>/<kind> format")
 	fRepoBranch          = flag.String("repo-branch", getStringEnv("REPO_BRANCH", "master"), "Branch of the git repository to use")
-	fRepoDepth           = flag.Int("repo-depth", getIntEnv("REPO_DEPTH", 0), "Depth of the git repository to fetch. Use zero to ignore")
+	fRepoDepth           = flag.Int("repo-depth", getIntEnv("REPO_DEPTH", 1), "Depth of the git repository to fetch. Use zero to ignore")
 	fRepoDest            = flag.String("repo-dest", getStringEnv("REPO_DEST", "/src"), "Path under which the the git repository is fetched")
 	fRepoPath            = flag.String("repo-path", getStringEnv("REPO_PATH", ""), "Path relative to the repository root that kube-applier operates in")
 	fRepoRemote          = flag.String("repo-remote", getStringEnv("REPO_REMOTE", ""), "Remote URL of the git repository that kube-applier uses as a source")

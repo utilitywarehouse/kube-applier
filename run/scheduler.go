@@ -236,7 +236,8 @@ func (s *Scheduler) waybillsWithGitChanges() []*kubeapplierv1alpha1.Waybill {
 		wbId := fmt.Sprintf("%s/%s", waybills[i].Namespace, waybills[i].Name)
 		changed, err := s.Repository.HasChangesForPath(ctx, filepath.Join(s.RepoPath, path), sinceHash)
 		if err != nil {
-			log.Logger("scheduler").Warn("Could not check path for changes, skipping polling run", "waybill", wbId, "path", path, "since", sinceHash, "error", err)
+			log.Logger("scheduler").Warn("Could not check path for changes, forcing polling run", "waybill", wbId, "path", path, "since", sinceHash, "error", err)
+			result = append(result, waybills[i])
 			continue
 		}
 		if changed {
