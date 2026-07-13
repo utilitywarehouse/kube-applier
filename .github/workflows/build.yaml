@@ -32,8 +32,13 @@ jobs:
         uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version-file: go.mod
+      - name: Setup envtest binaries
+        run: |
+          go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+          KUBEBUILDER_ASSETS="$(setup-envtest use -p path 1.30.x)"
+          echo "KUBEBUILDER_ASSETS=$KUBEBUILDER_ASSETS" >> "$GITHUB_ENV"
       - name: Run test suite
-        run: make test
+        run: go test -race -count=1 -cover ./...
 
   docker:
     needs: test

@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
+	"github.com/utilitywarehouse/kube-applier/envtestassets"
 	"github.com/utilitywarehouse/kube-applier/log"
 	// +kubebuilder:scaffold:imports
 )
@@ -25,6 +26,10 @@ var (
 	testKubeClient *Client
 	testEnv        *envtest.Environment
 )
+
+func TestMain(m *testing.M) {
+	envtestassets.Main(m)
+}
 
 func TestClient(t *testing.T) {
 	RegisterFailHandler(Fail)

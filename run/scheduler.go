@@ -10,10 +10,10 @@ import (
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 	"github.com/utilitywarehouse/kube-applier/client"
+	"github.com/utilitywarehouse/kube-applier/clock"
 	"github.com/utilitywarehouse/kube-applier/git"
 	"github.com/utilitywarehouse/kube-applier/log"
 	"github.com/utilitywarehouse/kube-applier/metrics"
-	"github.com/utilitywarehouse/kube-applier/sysutil"
 )
 
 // Type defines what kind of apply run is performed.
@@ -48,7 +48,7 @@ const (
 
 // Scheduler handles queueing apply runs.
 type Scheduler struct {
-	Clock               sysutil.ClockInterface
+	Clock               clock.ClockInterface
 	GitPollWait         time.Duration
 	KubeClient          *client.Client
 	Repository          *git.Repository

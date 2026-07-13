@@ -1,5 +1,0 @@
-bases:
-  # kube-applier: key_deploy
-  - ssh://github.com/utilitywarehouse/kube-applier//testdata/bases/simple-deployment?ref=master
-resources:
-  - 00-namespace.yaml

@@ -15,6 +15,7 @@ import (
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 	"github.com/utilitywarehouse/kube-applier/client"
+	"github.com/utilitywarehouse/kube-applier/envtestassets"
 	"github.com/utilitywarehouse/kube-applier/log"
 	// +kubebuilder:scaffold:imports
 )
@@ -27,6 +28,10 @@ var (
 	testKubeClient *client.Client
 	testEnv        *envtest.Environment
 )
+
+func TestMain(m *testing.M) {
+	envtestassets.Main(m)
+}
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)

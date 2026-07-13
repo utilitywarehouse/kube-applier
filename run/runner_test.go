@@ -2,14 +2,12 @@ package run
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -27,30 +25,6 @@ import (
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
 	"github.com/utilitywarehouse/kube-applier/kubectl"
 	"github.com/utilitywarehouse/kube-applier/metrics"
-)
-
-// The ssh keys below are base64-encoded in order to work around
-// GitHub's notifications about committing a private key in a public
-// repo, which triggers for the deploy key. This key is a read-only
-// deploy key for a public repository and is safe to commit.
-var (
-	randomKey, _ = base64.StdEncoding.DecodeString(
-		`LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFB
-QUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhP
-UUFBQUNDbjArQUw1bzNDU1g3U2UwOTY5SUgvYWc4b2hlUkJkUXlwd1dXN1M0N1NMUUFBQUpBYVNL
-MmxHa2l0CnBRQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDQ24wK0FMNW8zQ1NYN1NlMDk2OUlIL2Fn
-OG9oZVJCZFF5cHdXVzdTNDdTTFEKQUFBRUJTMUpJNnhwa0lYN1JxK3Nnc1YyM2FrY1FBeGFDaUI4
-SjM3b0ZKVkViUHhLZlQ0QXZtamNKSmZ0SjdUM3IwZ2Y5cQpEeWlGNUVGMURLbkJaYnRManRJdEFB
-QUFER0ZzYTJGeVFHdDFhbWx5WVFFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`)
-
-	deployKey, _ = base64.StdEncoding.DecodeString(
-		`LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFB
-QUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhP
-UUFBQUNEMnlBVGFaZHZGOXFvQU9QWnkrejBSaHI3dm1IdVZ3WldvUkFwYjhuZ3hLQUFBQUpCMm1j
-VlZkcG5GClZRQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDRDJ5QVRhWmR2Rjlxb0FPUFp5K3owUmhy
-N3ZtSHVWd1pXb1JBcGI4bmd4S0EKQUFBRUI1VDBoKzNGV0J0M0xaZXpyL00rZzd5Q2NtaHFjYWRQ
-V0dTRjltUDh1L21mYklCTnBsMjhYMnFnQTQ5bkw3UFJHRwp2dStZZTVYQmxhaEVDbHZ5ZURFb0FB
-QUFER0ZzYTJGeVFHdDFhbWx5WVFFPQotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K`)
 )
 
 // skipUnlessStrongbox skips specs that rely on the strongbox binary (used as a
@@ -367,316 +341,6 @@ Error applying Secret(s) [-invalid]; kubectl output has been omitted as it may c
 				`kube_applier_namespace_apply_count{namespace="app-a-kustomize",success="false"} 1`,
 				`kube_applier_run_latency_seconds`,
 				`kube_applier_run_queue{namespace="app-a-kustomize",type="Git polling run"} 0`,
-			})
-		})
-	})
-
-	Context("When operating on a Waybill that defines a git ssh Secret", func() {
-		It("Should be able to use it to pull remote kustomize bases", func() {
-			// 1. app-b-kustomize-nokey
-			// 2. app-b-kustomize-notfound
-			// 3. app-b-kustomize-noaccess
-			// 4. app-b-kustomize
-			// 5. app-b-kustomize-twokeys
-			// 6. app-c-kustomize-withkey
-			wbList := []*kubeapplierv1alpha1.Waybill{
-				{ // when trying to pull a base over ssh without specifying a key, kustomize will return an error
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-b-kustomize",
-						Namespace: "app-b-kustomize-nokey",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:      ptr.To(true),
-						Prune:          ptr.To(true),
-						RepositoryPath: "app-b-kustomize",
-					},
-				},
-				{ // if they key Secret does not exist, we should get an event
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-b-kustomize",
-						Namespace: "app-b-kustomize-notfound",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:       ptr.To(true),
-						Prune:           ptr.To(true),
-						RepositoryPath:  "app-b-kustomize",
-						GitSSHSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "git-ssh"},
-					},
-				},
-				{ // if the key does not have access to the repository, kustomize will return an error
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-b-kustomize",
-						Namespace: "app-b-kustomize-noaccess",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:       ptr.To(true),
-						Prune:           ptr.To(true),
-						RepositoryPath:  "app-b-kustomize",
-						GitSSHSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "git-ssh"},
-					},
-				},
-				{ // this namespace has a deploy key configured
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-b-kustomize",
-						Namespace: "app-b-kustomize",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:       ptr.To(true),
-						Prune:           ptr.To(true),
-						RepositoryPath:  "app-b-kustomize",
-						GitSSHSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "git-ssh"},
-					},
-				},
-				{ // this namespace has a deploy key configured
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-b-kustomize",
-						Namespace: "app-b-kustomize-twokeys",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:       ptr.To(true),
-						Prune:           ptr.To(true),
-						RepositoryPath:  "app-b-kustomize",
-						GitSSHSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "git-ssh"},
-					},
-				},
-				{ // the key is irrelevant if the https (default) scheme is used
-					TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-c-kustomize",
-						Namespace: "app-c-kustomize-withkey",
-					},
-					Spec: kubeapplierv1alpha1.WaybillSpec{
-						AutoApply:       ptr.To(true),
-						Prune:           ptr.To(true),
-						RepositoryPath:  "app-c-kustomize",
-						GitSSHSecretRef: &kubeapplierv1alpha1.ObjectReference{Name: "git-ssh"},
-					},
-				},
-			}
-
-			testEnsureWaybills(wbList)
-
-			Expect(k8sClient.GetClient().Create(context.TODO(), &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "git-ssh",
-					Namespace: "app-b-kustomize-noaccess",
-				},
-				StringData: map[string]string{"key_random": string(randomKey)},
-				Type:       corev1.SecretTypeOpaque,
-			})).To(BeNil())
-			Expect(k8sClient.GetClient().Create(context.TODO(), &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "git-ssh",
-					Namespace: "app-b-kustomize",
-				},
-				StringData: map[string]string{"key_deploy": string(deployKey)},
-				Type:       corev1.SecretTypeOpaque,
-			})).To(BeNil())
-			Expect(k8sClient.GetClient().Create(context.TODO(), &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "git-ssh",
-					Namespace: "app-b-kustomize-twokeys",
-				},
-				StringData: map[string]string{
-					"key_random": string(randomKey),
-					"key_deploy": string(deployKey),
-				},
-				Type: corev1.SecretTypeOpaque,
-			})).To(BeNil())
-			Expect(k8sClient.GetClient().Create(context.TODO(), &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "git-ssh",
-					Namespace: "app-c-kustomize-withkey",
-				},
-				StringData: map[string]string{"key_random": string(randomKey)},
-				Type:       corev1.SecretTypeOpaque,
-			})).To(BeNil())
-
-			bHeadCommitHash, err := runner.Repository.HashForPath(context.TODO(), filepath.Join(runner.RepoPath, "app-b-kustomize"))
-			Expect(err).To(BeNil())
-			Expect(bHeadCommitHash).ToNot(BeEmpty())
-			cHeadCommitHash, err := runner.Repository.HashForPath(context.TODO(), filepath.Join(runner.RepoPath, "app-c-kustomize"))
-			Expect(err).To(BeNil())
-			Expect(cHeadCommitHash).ToNot(BeEmpty())
-
-			expectedStatus := []*kubeapplierv1alpha1.WaybillStatusRun{
-				// 1. app-b-kustomize-nokey
-				{
-					Command:      fmt.Sprintf("^%s build /.*$", kustomizePath),
-					Commit:       bHeadCommitHash,
-					ErrorMessage: "exit status 1",
-					Finished:     metav1.Time{},
-					Output:       `(?s).*Please make sure you have the correct access rights.*exit status 128`,
-					Started:      metav1.Time{},
-					Success:      false,
-					Type:         PollingRun.String(),
-				},
-				// 2. app-b-kustomize-notfound
-				nil,
-				// 3. app-b-kustomize-noaccess
-				//
-				// `(na)?` at the end of the pattern never
-				// matches, but is there to help us identify which
-				// test failed
-				{
-					Command:      fmt.Sprintf("^%s build /.*$", kustomizePath),
-					Commit:       bHeadCommitHash,
-					ErrorMessage: "exit status 1",
-					Finished:     metav1.Time{},
-					Output:       `(?s)Error: accumulating resources:.*'ssh:\/\/deploy_github_com\/utilitywarehouse\/kube-applier\/\/testdata\/bases\/simple-deployment\?ref=master'.*exit status 128(na)?`,
-					Started:      metav1.Time{},
-					Success:      false,
-					Type:         PollingRun.String(),
-				},
-				// 4. app-b-kustomize
-				{
-					Command:      "",
-					Commit:       bHeadCommitHash,
-					ErrorMessage: "",
-					Finished:     metav1.Time{},
-					Output: `namespace/app-b-kustomize configured
-deployment.apps/test-deployment created
-`,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
-				},
-				// 5. app-b-kustomize-twokeys
-				{
-					Command:      "",
-					Commit:       bHeadCommitHash,
-					ErrorMessage: "",
-					Finished:     metav1.Time{},
-					Output: `namespace/app-b-kustomize unchanged
-deployment.apps/test-deployment created
-`,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
-				},
-				// 6. app-c-kustomize-withkey
-				{
-					Command:      "",
-					Commit:       cHeadCommitHash,
-					ErrorMessage: "",
-					Finished:     metav1.Time{},
-					Output: `namespace/app-c-kustomize created
-deployment.apps/test-deployment created
-`,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
-				},
-			}
-
-			// construct expected waybill list
-			expected := make([]kubeapplierv1alpha1.Waybill, len(wbList))
-			for i := range wbList {
-				expected[i] = *wbList[i]
-				expected[i].Status = kubeapplierv1alpha1.WaybillStatus{LastRun: expectedStatus[i]}
-			}
-
-			for i := range wbList {
-				Enqueue(runQueue, PollingRun, wbList[i])
-			}
-
-			Eventually(
-				func() error {
-					deployment := &appsv1.Deployment{}
-					return k8sClient.GetAPIReader().Get(context.TODO(), client.ObjectKey{Namespace: "app-c-kustomize-withkey", Name: "test-deployment"}, deployment)
-				},
-				time.Second*120,
-				time.Second,
-			).Should(BeNil())
-
-			runner.Stop()
-
-			for i := range wbList {
-				if wbList[i].Status.LastRun != nil {
-					wbList[i].Status.LastRun.Output = testStripKubectlWarnings(wbList[i].Status.LastRun.Output)
-				}
-				Expect(*wbList[i]).Should(matchWaybill(expected[i], kubeCtlPath, kustomizePath, runner.RepoPath, applyOptions.pruneWhitelist(wbList[i], runner.PruneBlacklist)))
-			}
-
-			testMatchEvents([]gomegatypes.GomegaMatcher{
-				matchEvent(*wbList[1], corev1.EventTypeWarning, "WaybillRunRequestFailed", `failed setting up repository clone: secrets "git-ssh" not found`),
-			})
-
-			testMetrics([]string{
-				`kube_applier_last_run_timestamp_seconds`,
-				`kube_applier_namespace_apply_count{namespace="app-b-kustomize-nokey",success="false"} 1`,
-				`kube_applier_namespace_apply_count{namespace="app-b-kustomize-noaccess",success="false"} 1`,
-				`kube_applier_namespace_apply_count{namespace="app-b-kustomize",success="true"} 1`,
-				`kube_applier_namespace_apply_count{namespace="app-c-kustomize-withkey",success="true"} 1`,
-				`kube_applier_run_latency_seconds`,
-				`kube_applier_run_queue{namespace="[^"]+",type="Git polling run"} 0`,
-			})
-		})
-	})
-
-	Context("When operating on a Waybill that uses kustomize with no git secret it should fall back to KA ssh key", func() {
-		It("Should be able to build and apply", func() {
-			sshKey, err := os.CreateTemp("", "testGitSSHKey")
-			if err != nil {
-				panic(err)
-			}
-			defer syscall.Unlink(sshKey.Name())
-			os.WriteFile(sshKey.Name(), []byte(deployKey), 0700)
-			runner.DefaultGitSSHKeyPath = sshKey.Name()
-
-			waybill := kubeapplierv1alpha1.Waybill{
-				TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "app-d",
-					Namespace: "app-d-kustomize",
-				},
-				Spec: kubeapplierv1alpha1.WaybillSpec{
-					AutoApply: ptr.To(true),
-					Prune:     ptr.To(true),
-				},
-			}
-
-			testEnsureWaybills([]*kubeapplierv1alpha1.Waybill{&waybill})
-
-			repositoryPath := waybill.Spec.RepositoryPath
-			if repositoryPath == "" {
-				repositoryPath = waybill.Namespace
-			}
-			headCommitHash, err := runner.Repository.HashForPath(context.TODO(), filepath.Join(runner.RepoPath, repositoryPath))
-			Expect(err).To(BeNil())
-			expected := waybill
-			expected.Status = kubeapplierv1alpha1.WaybillStatus{
-				LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
-					Command:      "",
-					Commit:       headCommitHash,
-					ErrorMessage: "",
-					Finished:     metav1.Time{},
-					Output: `namespace/app-d-kustomize configured
-deployment.apps/test-deployment created
-`,
-					Started: metav1.Time{},
-					Success: true,
-					Type:    PollingRun.String(),
-				},
-			}
-
-			Enqueue(runQueue, PollingRun, &waybill)
-			runner.Stop()
-
-			waybill.Status.LastRun.Output = testStripKubectlWarnings(waybill.Status.LastRun.Output)
-			Expect(waybill).Should(matchWaybill(expected, kubeCtlPath, kustomizePath, runner.RepoPath, applyOptions.pruneWhitelist(&waybill, runner.PruneBlacklist)))
-
-			testMetrics([]string{
-				`kube_applier_kubectl_exit_code_count{exit_code="0",namespace="app-d-kustomize"} 1`,
-				`kube_applier_last_run_timestamp_seconds{namespace="app-d-kustomize"}`,
-				`kube_applier_namespace_apply_count{namespace="app-d-kustomize",success="true"} 1`,
-				`kube_applier_run_latency_seconds`,
-				`kube_applier_run_queue{namespace="app-d-kustomize",type="Git polling run"} 0`,
 			})
 		})
 	})
@@ -1011,6 +675,205 @@ deployment.apps/test-deployment created
 			testMetrics([]string{
 				`kube_applier_run_queue_failures{namespace="failed-to-queue",type="Git polling run"} 2`,
 			})
+		})
+	})
+
+	Context("When the Waybill has a GitSSHSecretRef", func() {
+		It("Should set up SSH config, key files, and known_hosts from the secret", func() {
+			tmpDir := GinkgoT().TempDir()
+			ns := "git-ssh-multi-test"
+
+			By("creating the namespace")
+			Expect(k8sClient.GetClient().Create(context.TODO(), &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: ns},
+			})).To(Succeed())
+
+			By("creating the SSH secret with multiple keys and known_hosts")
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "git-ssh",
+					Namespace: ns,
+				},
+				Data: map[string][]byte{
+					"key_deploy":  []byte("fake-deploy-key\n"),
+					"key_random":  []byte("fake-random-key\n"),
+					"known_hosts": []byte("github.com ssh-ed25519 AAAA...\n"),
+				},
+			}
+			Expect(k8sClient.GetClient().Create(context.TODO(), secret)).To(Succeed())
+
+			waybill := &kubeapplierv1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-multi",
+					Namespace: ns,
+				},
+				Spec: kubeapplierv1alpha1.WaybillSpec{
+					GitSSHSecretRef: &kubeapplierv1alpha1.ObjectReference{
+						Name: "git-ssh",
+					},
+				},
+			}
+
+			By("calling setupGitSSH")
+			env, err := runner.setupGitSSH(context.Background(), waybill, tmpDir)
+			Expect(err).To(BeNil())
+
+			By("verifying GIT_SSH_COMMAND")
+			Expect(env).To(ContainSubstring("GIT_SSH_COMMAND=ssh -q -F " + filepath.Join(tmpDir, ".ssh", "config")))
+			Expect(env).To(ContainSubstring("UserKnownHostsFile=" + filepath.Join(tmpDir, ".ssh", "known_hosts")))
+
+			By("verifying the SSH config file contains host blocks for both keys")
+			configData, err := os.ReadFile(filepath.Join(tmpDir, ".ssh", "config"))
+			Expect(err).To(BeNil())
+			configStr := string(configData)
+			Expect(configStr).To(ContainSubstring("Host deploy_github_com"))
+			Expect(configStr).To(ContainSubstring("Host random_github_com"))
+			// Two keys: no Host github.com fallback
+			Expect(configStr).NotTo(ContainSubstring("\nHost github.com"))
+
+			By("verifying key files were written")
+			deployKey, err := os.ReadFile(filepath.Join(tmpDir, ".ssh", "key_deploy"))
+			Expect(err).To(BeNil())
+			Expect(string(deployKey)).To(Equal("fake-deploy-key\n"))
+			randomKey, err := os.ReadFile(filepath.Join(tmpDir, ".ssh", "key_random"))
+			Expect(err).To(BeNil())
+			Expect(string(randomKey)).To(Equal("fake-random-key\n"))
+
+			By("verifying known_hosts file was written")
+			knownHosts, err := os.ReadFile(filepath.Join(tmpDir, ".ssh", "known_hosts"))
+			Expect(err).To(BeNil())
+			Expect(string(knownHosts)).To(Equal("github.com ssh-ed25519 AAAA...\n"))
+		})
+
+		It("Should add Host github.com fallback for single key", func() {
+			tmpDir := GinkgoT().TempDir()
+			ns := "git-ssh-single-test"
+
+			By("creating namespace")
+			Expect(k8sClient.GetClient().Create(context.TODO(), &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: ns},
+			})).To(Succeed())
+
+			By("creating secret with a single key")
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "git-ssh-single",
+					Namespace: ns,
+				},
+				Data: map[string][]byte{
+					"key_deploy": []byte("single-key\n"),
+				},
+			}
+			Expect(k8sClient.GetClient().Create(context.TODO(), secret)).To(Succeed())
+
+			waybill := &kubeapplierv1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-single",
+					Namespace: ns,
+				},
+				Spec: kubeapplierv1alpha1.WaybillSpec{
+					GitSSHSecretRef: &kubeapplierv1alpha1.ObjectReference{
+						Name: "git-ssh-single",
+					},
+				},
+			}
+
+			By("calling setupGitSSH")
+			env, err := runner.setupGitSSH(context.Background(), waybill, tmpDir)
+			Expect(err).To(BeNil())
+
+			By("verifying the Host github.com fallback is present")
+			configData, err := os.ReadFile(filepath.Join(tmpDir, ".ssh", "config"))
+			Expect(err).To(BeNil())
+			configStr := string(configData)
+			Expect(configStr).To(ContainSubstring("Host deploy_github_com"))
+			Expect(configStr).To(ContainSubstring("Host github.com"))
+			// known_hosts not in secret: fragment defaults to /dev/null
+			Expect(env).To(ContainSubstring("UserKnownHostsFile=/dev/null"))
+		})
+
+		It("Should default known_hosts to /dev/null when not present in secret", func() {
+			tmpDir := GinkgoT().TempDir()
+			ns := "git-ssh-nokh-test"
+
+			By("creating namespace")
+			Expect(k8sClient.GetClient().Create(context.TODO(), &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: ns},
+			})).To(Succeed())
+
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "git-ssh-nokh",
+					Namespace: ns,
+				},
+				Data: map[string][]byte{
+					"key_deploy": []byte("deploy-key\n"),
+				},
+			}
+			Expect(k8sClient.GetClient().Create(context.TODO(), secret)).To(Succeed())
+
+			waybill := &kubeapplierv1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-nokh",
+					Namespace: ns,
+				},
+				Spec: kubeapplierv1alpha1.WaybillSpec{
+					GitSSHSecretRef: &kubeapplierv1alpha1.ObjectReference{
+						Name: "git-ssh-nokh",
+					},
+				},
+			}
+
+			env, err := runner.setupGitSSH(context.Background(), waybill, tmpDir)
+			Expect(err).To(BeNil())
+
+			// No known_hosts in secret => fragment defaults to /dev/null
+			Expect(env).To(ContainSubstring("UserKnownHostsFile=/dev/null"))
+			Expect(env).To(ContainSubstring("StrictHostKeyChecking=no"))
+		})
+
+		It("Should error when secret is not in the waybill namespace and lacks the allowed-namespaces annotation", func() {
+			tmpDir := GinkgoT().TempDir()
+			ns := "git-ssh-crossns-test"
+			secretNs := "git-ssh-other-ns"
+
+			By("creating both namespaces")
+			Expect(k8sClient.GetClient().Create(context.TODO(), &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: ns},
+			})).To(Succeed())
+			Expect(k8sClient.GetClient().Create(context.TODO(), &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: secretNs},
+			})).To(Succeed())
+
+			By("creating secret in a different namespace without the allowed-namespaces annotation")
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "git-ssh-other",
+					Namespace: secretNs,
+				},
+				Data: map[string][]byte{
+					"key_deploy": []byte("cross-ns-key\n"),
+				},
+			}
+			Expect(k8sClient.GetClient().Create(context.TODO(), secret)).To(Succeed())
+
+			waybill := &kubeapplierv1alpha1.Waybill{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-crossns",
+					Namespace: ns,
+				},
+				Spec: kubeapplierv1alpha1.WaybillSpec{
+					GitSSHSecretRef: &kubeapplierv1alpha1.ObjectReference{
+						Name:      "git-ssh-other",
+						Namespace: secretNs,
+					},
+				},
+			}
+
+			_, err := runner.setupGitSSH(context.Background(), waybill, tmpDir)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("cannot be used in namespace"))
+			Expect(err.Error()).To(ContainSubstring(secretAllowedNamespacesAnnotation))
 		})
 	})
 })
