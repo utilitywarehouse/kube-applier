@@ -1,4 +1,4 @@
-{{define "index"}}
+{{define "pageHeader"}}
 <!doctype html>
 <html>
 <head>
@@ -12,34 +12,36 @@
 </head>
 <body>
     <h1 class="text-center">kube-applier</h1>
-    {{ if . }}
+{{end}}
+
+{{define "index"}}{{template "pageHeader" .}}    {{ if .Namespaces }}
         <div class="row">
             <div class="col-md-4"></div>
             <div id="force-alert-container" class="col-md-4"></div>
         </div>
     
-        {{ if (filter . "pending").Namespaces }}
-            {{template "section" (filter . "pending")}}
+        {{ if (filter .Namespaces "pending").Namespaces }}
+            {{template "section" (withSelect .SelectedNamespace (filter .Namespaces "pending"))}}
         {{ end }}
 
-        {{ if (filter . "auto-apply-disabled").Namespaces }}
-            {{template "section" (filter . "auto-apply-disabled")}}
+        {{ if (filter .Namespaces "auto-apply-disabled").Namespaces }}
+            {{template "section" (withSelect .SelectedNamespace (filter .Namespaces "auto-apply-disabled"))}}
         {{ end }}
 
-        {{ if (filter . "dry-run").Namespaces }}
-            {{template "section" (filter . "dry-run")}}
+        {{ if (filter .Namespaces "dry-run").Namespaces }}
+            {{template "section" (withSelect .SelectedNamespace (filter .Namespaces "dry-run"))}}
         {{ end }}
         
-        {{ if (filter . "failure").Namespaces }}
-            {{template "section" (filter . "failure")}}
+        {{ if (filter .Namespaces "failure").Namespaces }}
+            {{template "section" (withSelect .SelectedNamespace (filter .Namespaces "failure"))}}
         {{ end }}
 
-        {{ if (filter . "warning").Namespaces }}
-            {{template "section" (filter . "warning")}}
+        {{ if (filter .Namespaces "warning").Namespaces }}
+            {{template "section" (withSelect .SelectedNamespace (filter .Namespaces "warning"))}}
         {{ end }}
 
-        {{ if (filter . "success").Namespaces }}
-            {{template "section" (filter . "success")}}
+        {{ if (filter .Namespaces "success").Namespaces }}
+            {{template "section" (withSelect .SelectedNamespace (filter .Namespaces "success"))}}
         {{ end }}
 
     {{ else }}
@@ -66,8 +68,6 @@
                                 Auto Apply Disabled Namespaces: {{ len .Namespaces }} / {{ .Total }}
                             {{else if eq $.FilteredBy "dry-run"}}
                                 Dry Run Only Namespaces: {{ len .Namespaces }} / {{ .Total }}
-                            {{else if eq $.FilteredBy "pending"}}
-                                Pending Namespaces: {{ len .Namespaces }} / {{ .Total }}
                             {{else if eq $.FilteredBy "failure"}}
                                 Failed Namespaces: {{ len .Namespaces }} / {{ .Total }}
                             {{else if eq $.FilteredBy "warning"}}
@@ -80,7 +80,7 @@
                 </div>
                 <div id="{{$.FilteredBy}}" class="panel-group collapse in">
                     {{ range $wb :=  .Namespaces }}
-                        {{template "namespace" $wb}}
+                        {{template "namespace" (nsWithSelect $.SelectedNamespace $wb)}}
                     {{ end }}
                 </div>
             </div>
@@ -94,11 +94,12 @@
 <div class="panel">
   <div class="panel-heading">
       <div class="panel-title">
-          <a data-toggle="collapse" href="#{{.Waybill.Namespace}}">{{ .Waybill.Namespace }} {{ status .Waybill }}</a>
+          <a href="/ns/{{.Waybill.Namespace}}">{{ .Waybill.Namespace }} {{ status .Waybill }}</a>{{if .Waybill.Status.LastRun }}
+          <button type="button" class="btn btn-default btn-xs ns-toggle" data-toggle="collapse" data-target="#{{.Waybill.Namespace}}" aria-expanded="{{if eq .Waybill.Namespace .SelectedNamespace}}true{{else}}false{{end}}">{{if eq .Waybill.Namespace .SelectedNamespace}}-{{else}}+{{end}}</button>{{end}}
       </div>
   </div>
   {{if .Waybill.Status.LastRun }}
-  <div id="{{.Waybill.Namespace}}" class="panel-collapse collapse">
+  <div id="{{.Waybill.Namespace}}" class="panel-collapse collapse{{if eq .Waybill.Namespace .SelectedNamespace}} in{{end}}">
       <ul class="list-group">
           <li class="list-group-item">
               <div class="row">
@@ -158,4 +159,24 @@
   </div>
   {{ end }}
 </div>
+{{ end }}
+
+{{define "namespacePage"}}{{template "pageHeader" .}}    <div class="row">
+        <div class="col-md-2"></div>
+        <div class="col-md-8"><a href="/">Back to all namespaces</a></div>
+    </div>
+    <div class="row">
+        <div class="col-md-4"></div>
+        <div id="force-alert-container" class="col-md-4"></div>
+    </div>
+    {{ range $wb := .Namespaces }}
+    <div class="row">
+        <div class="col-md-2"></div>
+        <div class="col-md-8">
+            {{template "namespace" (nsWithSelect $.SelectedNamespace $wb)}}
+        </div>
+    </div>
+    {{ end }}
+</body>
+</html>
 {{ end }}

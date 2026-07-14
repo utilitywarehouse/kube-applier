@@ -57,6 +57,28 @@ type Filtered struct {
 	Namespaces []Namespace
 }
 
+// pageData is the root data passed to the status page template.
+type pageData struct {
+	Namespaces        []Namespace
+	SelectedNamespace string
+}
+
+// sectionData wraps Filtered so the selected namespace name flows into the
+// section sub-template. Filtered fields are promoted via embedding, so
+// existing template accesses (.FilteredBy, .Total, .Namespaces) still work.
+type sectionData struct {
+	Filtered
+	SelectedNamespace string
+}
+
+// namespaceData wraps Namespace so the selected namespace name flows into the
+// namespace sub-template. Namespace fields are promoted via embedding, so
+// existing accesses (.Waybill, .Events, .DiffURLFormat) still work.
+type namespaceData struct {
+	Namespace
+	SelectedNamespace string
+}
+
 func filter(Namespaces []Namespace, filteredBy string) Filtered {
 	filtered := Filtered{
 		FilteredBy: filteredBy,
@@ -101,6 +123,20 @@ func filter(Namespaces []Namespace, filteredBy string) Filtered {
 		}
 	}
 	return filtered
+}
+
+// withSelect builds a sectionData from a selected namespace name and a Filtered
+// result, so the section template can pass the selected namespace down to each
+// namespace it renders.
+func withSelect(selected string, f Filtered) sectionData {
+	return sectionData{Filtered: f, SelectedNamespace: selected}
+}
+
+// nsWithSelect builds a namespaceData from a selected namespace name and a
+// Namespace, so the namespace template can decide whether to render its
+// collapsible panel expanded.
+func nsWithSelect(selected string, n Namespace) namespaceData {
+	return namespaceData{Namespace: n, SelectedNamespace: selected}
 }
 
 func isAutoApplyEnabled(ns Namespace) bool {

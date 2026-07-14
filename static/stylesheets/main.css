@@ -24,3 +24,8 @@ pre.commit {
 .force-button-group {
 	margin-bottom: 5px;
 }
+
+.ns-toggle {
+	margin-left: 5px;
+	padding: 1px 6px;
+}

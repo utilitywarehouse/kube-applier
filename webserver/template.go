@@ -21,6 +21,8 @@ func createTemplate(templatePath string) (*template.Template, error) {
 			"status":          status,
 			"splitByNewline":  splitByNewline,
 			"getOutputClass":  getOutputClass,
+			"withSelect":      withSelect,
+			"nsWithSelect":    nsWithSelect,
 		}).
 		ParseFiles(templatePath)
 	if err != nil {
