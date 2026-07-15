@@ -88,8 +88,49 @@ func (s *StatusPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	result := GetNamespaces(waybills, events, s.DiffURLFormat)
 
+	selected := mux.Vars(r)["namespace"]
+
+	if selected == "" {
+		// Main page: render full list of namespaces.
+		pageData := pageData{
+			Namespaces:        result,
+			SelectedNamespace: "",
+		}
+
+		rendered := &bytes.Buffer{}
+		if err := s.Template.ExecuteTemplate(rendered, "index", pageData); err != nil {
+			http.Error(w, "Error: Unable to render HTML template", http.StatusInternalServerError)
+			log.Logger("webserver").Error("Request failed", "error", http.StatusInternalServerError, "time", s.Clock.Now().String(), "err", err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		if _, err := rendered.WriteTo(w); err != nil {
+			log.Logger("webserver").Error("Request failed", "error", http.StatusInternalServerError, "time", s.Clock.Now().String(), "err", err)
+		}
+		log.Logger("webserver").Info("Request completed successfully", "time", s.Clock.Now().String())
+		return
+	}
+
+	// Single namespace page: find the requested namespace and render it alone.
+	var found *Namespace
+	for i := range result {
+		if result[i].Waybill.Namespace == selected {
+			found = &result[i]
+			break
+		}
+	}
+	if found == nil {
+		http.Error(w, "namespace not found", http.StatusNotFound)
+		return
+	}
+
+	pageData := pageData{
+		Namespaces:        []Namespace{*found},
+		SelectedNamespace: selected,
+	}
+
 	rendered := &bytes.Buffer{}
-	if err := s.Template.ExecuteTemplate(rendered, "index", result); err != nil {
+	if err := s.Template.ExecuteTemplate(rendered, "namespacePage", pageData); err != nil {
 		http.Error(w, "Error: Unable to render HTML template", http.StatusInternalServerError)
 		log.Logger("webserver").Error("Request failed", "error", http.StatusInternalServerError, "time", s.Clock.Now().String(), "err", err)
 		return
@@ -243,6 +284,7 @@ func (ws *WebServer) Start() error {
 	}
 	m.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	m.PathPrefix("/api/v1/forceRun").Handler(forceRunHandler)
+	m.HandleFunc("/ns/{namespace}", statusPageHandler.ServeHTTP)
 	m.PathPrefix("/").Handler(statusPageHandler)
 
 	ws.server = &http.Server{

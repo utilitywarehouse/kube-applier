@@ -9,11 +9,19 @@ $(document).ready(function() {
             forceRun($(this).data('namespace'))
         });
     });
+
+    // Swap +/- glyph on collapse toggle buttons.
+    $('.panel-collapse').on('shown.bs.collapse', function () {
+        $('button.ns-toggle[data-target="#' + this.id + '"]').text('-');
+    });
+    $('.panel-collapse').on('hidden.bs.collapse', function () {
+        $('button.ns-toggle[data-target="#' + this.id + '"]').text('+');
+    });
 });
 
 // Send an XHR request to the server to force a run.
 function forceRun(namespace) {
-    url =  window.location.href + 'api/v1/forceRun';
+    url =  '/api/v1/forceRun';
     $.ajax({
         type: 'POST',
         url: url,

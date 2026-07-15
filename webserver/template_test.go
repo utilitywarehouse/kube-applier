@@ -241,7 +241,7 @@ Warning: discovery.k8s.io/v1beta1 EndpointSlice is deprecated in v1.21+, unavail
 	}
 
 	rendered := &bytes.Buffer{}
-	err = templt.ExecuteTemplate(rendered, "index", result)
+	err = templt.ExecuteTemplate(rendered, "index", pageData{Namespaces: result})
 	if err != nil {
 		t.Errorf("error executing template: %v\n", err)
 		return
@@ -256,5 +256,59 @@ Warning: discovery.k8s.io/v1beta1 EndpointSlice is deprecated in v1.21+, unavail
 
 	if diff := cmp.Diff(string(want), rendered.String(), removeSpaceEmptyLine); diff != "" {
 		t.Errorf("ExecuteTemplate mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func Test_ExecuteTemplate_NamespacePage(t *testing.T) {
+	wbList := []kubeapplierv1alpha1.Waybill{
+		{
+			TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "main",
+				Namespace: "test-ns",
+			},
+			Spec: kubeapplierv1alpha1.WaybillSpec{},
+			Status: kubeapplierv1alpha1.WaybillStatus{
+				LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+					Started:  metav1.Time{Time: fixedTime.Add(-time.Minute)},
+					Finished: metav1.Time{Time: fixedTime},
+					Type:     "Test run",
+				},
+			},
+		},
+	}
+
+	result := GetNamespaces(wbList, nil, diffURL)
+
+	templt, err := createTemplate("../templates/status.html")
+	if err != nil {
+		t.Errorf("error parsing template: %v\n", err)
+		return
+	}
+
+	rendered := &bytes.Buffer{}
+	err = templt.ExecuteTemplate(rendered, "namespacePage", pageData{
+		Namespaces:        result,
+		SelectedNamespace: "test-ns",
+	})
+	if err != nil {
+		t.Errorf("error executing template: %v\n", err)
+		return
+	}
+	output := rendered.String()
+
+	// Should contain the back link.
+	if !strings.Contains(output, "Back to all namespaces") {
+		t.Errorf("namespace page should contain back link")
+	}
+
+	// Panel should be expanded because SelectedNamespace matches.
+	if !strings.Contains(output, `id="test-ns" class="panel-collapse collapse in"`) {
+		t.Errorf("namespace panel should be expanded on the namespace page")
+	}
+
+	// Toggle button should show '-' (expanded) on the single-ns page.
+	if !strings.Contains(output, `class="btn btn-default btn-xs ns-toggle" data-toggle="collapse" data-target="#test-ns" aria-expanded="true">-</button>`) {
+		t.Errorf("namespace page should have the toggle button with '-' glyph for the expanded namespace")
 	}
 }

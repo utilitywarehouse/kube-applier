@@ -66,12 +66,26 @@ var _ = Describe("WebServer", func() {
 					Name:      "main",
 					Namespace: "foo",
 				},
+				Status: kubeapplierv1alpha1.WaybillStatus{
+					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+						Started:  metav1.Time{Time: time.Now()},
+						Finished: metav1.Time{Time: time.Now()},
+						Type:     "Test run",
+					},
+				},
 			},
 			{
 				TypeMeta: metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "main",
 					Namespace: "bar",
+				},
+				Status: kubeapplierv1alpha1.WaybillStatus{
+					LastRun: &kubeapplierv1alpha1.WaybillStatusRun{
+						Started:  metav1.Time{Time: time.Now()},
+						Finished: metav1.Time{Time: time.Now()},
+						Type:     "Test run",
+					},
 				},
 			},
 		}
@@ -138,6 +152,47 @@ var _ = Describe("WebServer", func() {
 			Expect(err).To(BeNil())
 			Expect(res.StatusCode).To(Equal(http.StatusOK))
 			Expect(body).ToNot(BeEmpty())
+
+			testWebServer.Shutdown()
+			close(testRunQueue)
+			Expect(testWebServerRequests()).To(Equal([]run.Request{}))
+		})
+
+		It("Should respond on the /ns/<namespace> route", func() {
+			testEnsureWaybills(wbList)
+
+			var fooBody string
+			Eventually(
+				func() error {
+					res, err := http.Get(fmt.Sprintf("http://localhost:%d/ns/foo", testWebServer.ListenPort))
+					if err != nil {
+						return err
+					}
+					defer res.Body.Close()
+					if res.StatusCode != http.StatusOK {
+						return fmt.Errorf("status %d", res.StatusCode)
+					}
+					b, err := io.ReadAll(res.Body)
+					if err != nil {
+						return err
+					}
+					fooBody = string(b)
+					return nil
+				},
+				time.Second*15,
+				time.Second,
+			).Should(BeNil())
+
+			// Single-namespace page shows only the matching namespace.
+			Expect(fooBody).To(ContainSubstring("Back to all namespaces"))
+			Expect(fooBody).To(ContainSubstring("foo"))
+			Expect(fooBody).ToNot(ContainSubstring("bar"))
+
+			// Unknown namespace returns 404.
+			res, err := http.Get(fmt.Sprintf("http://localhost:%d/ns/nonexistent", testWebServer.ListenPort))
+			Expect(err).To(BeNil())
+			defer res.Body.Close()
+			Expect(res.StatusCode).To(Equal(http.StatusNotFound))
 
 			testWebServer.Shutdown()
 			close(testRunQueue)
