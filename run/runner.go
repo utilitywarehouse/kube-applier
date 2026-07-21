@@ -231,7 +231,7 @@ func (r *Runner) processRequest(request Request) error {
 
 	if err := r.updateWaybillStatus(ctx, request.Waybill); err != nil {
 		log.Logger("runner").Warn("Could not update Waybill status", "waybill", wbId, "error", err)
-		r.KubeClient.EmitWaybillEvent(request.Waybill, corev1.EventTypeWarning, "WaybillUpdateStatusFailed", err.Error())
+		r.KubeClient.EmitWaybillEvent(request.Waybill, corev1.EventTypeWarning, "WaybillUpdateStatusFailed", "%s", err.Error())
 	}
 
 	if request.Waybill.Status.LastRun.Success {
@@ -273,7 +273,7 @@ func (r *Runner) updateWaybillStatus(ctx context.Context, waybill *kubeapplierv1
 func (r *Runner) captureRequestFailure(req Request, err error) {
 	wbId := fmt.Sprintf("%s/%s", req.Waybill.Namespace, req.Waybill.Name)
 	log.Logger("runner").Error("Run request failed", "waybill", wbId, "error", err)
-	r.KubeClient.EmitWaybillEvent(req.Waybill, corev1.EventTypeWarning, "WaybillRunRequestFailed", err.Error())
+	r.KubeClient.EmitWaybillEvent(req.Waybill, corev1.EventTypeWarning, "WaybillRunRequestFailed", "%s", err.Error())
 	r.updateWaybillStatusRequestFailure(req, err.Error())
 }
 
