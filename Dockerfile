@@ -19,13 +19,17 @@ RUN os=$(go env GOOS) && arch=$(go env GOARCH) \
   && chmod +x /usr/local/bin/strongbox \
   && strongbox -git-config
 
+# GOTOOLCHAIN pins the exact toolchain declared by go.mod's `go` line, so the
+# build isn't at the mercy of whatever patch version the base image ships.
 COPY go.mod go.sum /src/
-RUN go mod download
+RUN GOTOOLCHAIN=go$(awk '/^go /{print $2; exit}' go.mod) go mod download
 
 COPY . /src
 RUN go get -t ./... \
   && make test \
-  && CGO_ENABLED=0 && go build -o /kube-applier .
+  && CGO_ENABLED=0 && \
+  GOTOOLCHAIN=go$(awk '/^go /{print $2; exit}' go.mod) \
+  go build -o /kube-applier .
 
 FROM alpine:3.23
 RUN apk --no-cache add git openssh-client tini

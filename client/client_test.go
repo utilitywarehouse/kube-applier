@@ -184,7 +184,7 @@ var _ = Describe("Client", func() {
 				Expect(errors.IsAlreadyExists(err)).To(BeTrue())
 			}
 			for _, msg := range eventMessages {
-				testKubeClient.EmitWaybillEvent(&wb, corev1.EventTypeWarning, "TestWaybillEvent", msg)
+				testKubeClient.EmitWaybillEvent(&wb, corev1.EventTypeWarning, "TestWaybillEvent", "%s", msg)
 				//metav1.Time has second level precision when marshalling/unmarshalling
 				time.Sleep(1 * time.Second)
 			}

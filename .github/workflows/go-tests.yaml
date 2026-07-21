@@ -1,0 +1,58 @@
+name: Go tests
+
+on:
+  push:
+    tags:
+      - "*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go:
+          - { go-version: stable }
+          - { go-version-file: go.mod }
+        deps:
+          - locked
+          - latest
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: ${{ matrix.go.go-version }}
+          go-version-file: ${{ matrix.go.go-version-file }}
+      - uses: geomys/sandboxed-step@7d75eb49d17fdeeb3656b3a57d35932d205bcfb9 # v1.2.1
+        with:
+          run: |
+            set -euo pipefail
+
+            # Pinning to latest stable prior to v5.8.0 https://github.com/kubernetes-sigs/kustomize/issues/6019
+            KUSTOMIZE_VERSION="v5.7.1"
+            KUSTOMIZE_SHA256="ea375e7372f9aa029129d4b2d16c66b7750b7f1213c4f66f910d981c895818d8"
+            KUSTOMIZE_BINDIR="$(go env GOPATH)/bin"
+            mkdir -p "${KUSTOMIZE_BINDIR}"
+            curl -sSL -o /tmp/kustomize.tar.gz "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
+            echo "${KUSTOMIZE_SHA256}  /tmp/kustomize.tar.gz" | sha256sum -c -
+            tar -xzf /tmp/kustomize.tar.gz -C "${KUSTOMIZE_BINDIR}" kustomize
+            rm /tmp/kustomize.tar.gz
+            export PATH="${KUSTOMIZE_BINDIR}:${PATH}"
+            kustomize version
+
+            if [ "${{ matrix.deps }}" = "latest" ]; then
+              go get -u -t ./...
+            fi
+            go test -race -v ./...
