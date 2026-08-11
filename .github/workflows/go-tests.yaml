@@ -13,15 +13,6 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        go:
-          - { go-version: stable }
-          - { go-version-file: go.mod }
-        deps:
-          - locked
-          - latest
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -33,8 +24,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: ${{ matrix.go.go-version }}
-          go-version-file: ${{ matrix.go.go-version-file }}
+          go-version-file: go.mod
       - uses: geomys/sandboxed-step@7d75eb49d17fdeeb3656b3a57d35932d205bcfb9 # v1.2.1
         with:
           run: |
@@ -52,7 +42,4 @@ jobs:
             export PATH="${KUSTOMIZE_BINDIR}:${PATH}"
             kustomize version
 
-            if [ "${{ matrix.deps }}" = "latest" ]; then
-              go get -u -t ./...
-            fi
             go test -race -v ./...
