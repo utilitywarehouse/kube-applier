@@ -5,7 +5,7 @@ update it when a convention changes.
 
 ## What this is
 
-kube-applier (`github.com/utilitywarehouse/kube-applier`, Go 1.25) is a Kubernetes
+kube-applier (`github.com/utilitywarehouse/kube-applier`, Go 1.27) is a Kubernetes
 controller that applies declarative manifests from a git repo to the cluster it
 runs in. Entry point is `main.go`; the core packages are:
 

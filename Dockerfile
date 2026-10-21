@@ -1,4 +1,4 @@
-FROM golang:1.26-alpine AS build
+FROM golang:1.27-alpine AS build
 
 WORKDIR /src
 
@@ -31,7 +31,7 @@ RUN go get -t ./... \
   GOTOOLCHAIN=go$(awk '/^go /{print $2; exit}' go.mod) \
   go build -o /kube-applier .
 
-FROM alpine:3.23
+FROM alpine:3.24
 RUN apk --no-cache add git openssh-client tini
 COPY templates/ /templates/
 COPY static/ /static/
