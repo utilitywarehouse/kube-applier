@@ -19,15 +19,20 @@ import (
 )
 
 // TODO: this is essentially duplication from the run package, can we share?
-func testWebServerDrainRequests(requests <-chan run.Request) func() []run.Request {
+func testWebServerDrainRequests(queue *run.Queue) func() []run.Request {
 	ret := []run.Request{}
 	finished := make(chan bool)
 
 	go func() {
-		for r := range requests {
+		for {
+			r, key, shutdown := queue.Get()
+			if shutdown {
+				close(finished)
+				return
+			}
 			ret = append(ret, r)
+			queue.Done(key)
 		}
-		close(finished)
 	}()
 
 	return func() []run.Request {
@@ -38,13 +43,13 @@ func testWebServerDrainRequests(requests <-chan run.Request) func() []run.Reques
 
 var _ = Describe("WebServer", func() {
 	var (
-		testRunQueue          chan run.Request
+		testRunQueue          *run.Queue
 		testWebServer         WebServer
 		testWebServerRequests func() []run.Request
 	)
 
 	BeforeEach(func() {
-		testRunQueue = make(chan run.Request)
+		testRunQueue = run.NewQueue()
 		testWebServerRequests = testWebServerDrainRequests(testRunQueue)
 		testWebServer = WebServer{
 			ListenPort:    35432,
@@ -125,7 +130,7 @@ var _ = Describe("WebServer", func() {
 			Expect(body).To(MatchJSON(`{"result": "success", "message": "Run queued"}`))
 
 			testWebServer.Shutdown()
-			close(testRunQueue)
+			testRunQueue.ShutDown()
 
 			Expect(testWebServerRequests()).To(Equal([]run.Request{{
 				Type:    run.ForcedRun,
@@ -154,7 +159,7 @@ var _ = Describe("WebServer", func() {
 			Expect(body).ToNot(BeEmpty())
 
 			testWebServer.Shutdown()
-			close(testRunQueue)
+			testRunQueue.ShutDown()
 			Expect(testWebServerRequests()).To(Equal([]run.Request{}))
 		})
 
@@ -195,7 +200,7 @@ var _ = Describe("WebServer", func() {
 			Expect(res.StatusCode).To(Equal(http.StatusNotFound))
 
 			testWebServer.Shutdown()
-			close(testRunQueue)
+			testRunQueue.ShutDown()
 			Expect(testWebServerRequests()).To(Equal([]run.Request{}))
 		})
 	})

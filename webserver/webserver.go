@@ -34,7 +34,7 @@ type WebServer struct {
 	DiffURLFormat string
 	KubeClient    *client.Client
 	ListenPort    int
-	RunQueue      chan<- run.Request
+	RunQueue      *run.Queue
 	StatusTimeout time.Duration
 	TemplatePath  string
 	server        *http.Server
@@ -147,7 +147,7 @@ func (s *StatusPageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 type ForceRunHandler struct {
 	Authenticator *oidc.Authenticator
 	KubeClient    *client.Client
-	RunQueue      chan<- run.Request
+	RunQueue      *run.Queue
 }
 
 // ServeHTTP handles requests for forcing a run by attempting to add to the
@@ -231,7 +231,7 @@ func (f *ForceRunHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		run.Enqueue(f.RunQueue, run.ForcedRun, waybill)
+		f.RunQueue.Enqueue(run.ForcedRun, waybill)
 		data.Result = "success"
 		data.Message = "Run queued"
 		w.WriteHeader(http.StatusOK)

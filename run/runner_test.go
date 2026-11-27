@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kubeapplierv1alpha1 "github.com/utilitywarehouse/kube-applier/apis/kubeapplier/v1alpha1"
+	"github.com/utilitywarehouse/kube-applier/clock"
 	"github.com/utilitywarehouse/kube-applier/kubectl"
 	"github.com/utilitywarehouse/kube-applier/metrics"
 )
@@ -109,16 +110,21 @@ func TestApplyOptions_pruneWhitelist(t *testing.T) {
 var _ = Describe("Runner", func() {
 	var (
 		runner        Runner
-		runQueue      chan<- Request
+		runQueue      *Queue
 		applyOptions  *ApplyOptions
 		kustomizePath string
+		// runStartedAt bounds the Started/Finished timestamps the runner
+		// records, since it stamps them from its own clock.
+		runStartedAt time.Time
 	)
 
 	BeforeEach(func() {
 		kubeCtlClient := kubectl.NewClient(cfg.Host, "", kubeCtlPath, kubeCtlOpts)
+		// Truncated because metav1.Time is serialised with second precision.
+		runStartedAt = time.Now().Truncate(time.Second)
 
 		runner = Runner{
-			Clock:          &zeroClock{},
+			Clock:          &clock.Clock{},
 			DryRun:         false,
 			KubeClient:     k8sClient,
 			KubeCtlClient:  kubeCtlClient,
@@ -158,7 +164,7 @@ var _ = Describe("Runner", func() {
 			wbListExpected := []kubeapplierv1alpha1.Waybill{}
 
 			for i := range wbList {
-				Enqueue(runQueue, PollingRun, &wbList[i])
+				runQueue.Enqueue(PollingRun, &wbList[i])
 			}
 			runner.Stop()
 
@@ -213,33 +219,33 @@ var _ = Describe("Runner", func() {
 				{
 					Command:      "",
 					ErrorMessage: "",
-					Finished:     metav1.Time{},
+					Finished:     metav1.NewTime(runStartedAt),
 					Output: `namespace/app-a configured
 deployment.apps/test-deployment created
 `,
-					Started: metav1.Time{},
+					Started: metav1.NewTime(runStartedAt),
 					Success: true,
 					Type:    PollingRun.String(),
 				},
 				{
 					Command:      "",
 					ErrorMessage: "exit status 1",
-					Finished:     metav1.Time{},
+					Finished:     metav1.NewTime(runStartedAt),
 					Output: `namespace/app-b configured
 The Deployment "test-deployment" is invalid: spec.template.spec.containers: Required value
 `,
-					Started: metav1.Time{},
+					Started: metav1.NewTime(runStartedAt),
 					Success: false,
 					Type:    PollingRun.String(),
 				},
 				{
 					Command:      "",
 					ErrorMessage: "",
-					Finished:     metav1.Time{},
+					Finished:     metav1.NewTime(runStartedAt),
 					Output: `namespace/app-c configured (server dry run)
 deployment.apps/test-deployment created (server dry run)
 `,
-					Started: metav1.Time{},
+					Started: metav1.NewTime(runStartedAt),
 					Success: true,
 					Type:    PollingRun.String(),
 				},
@@ -262,9 +268,10 @@ deployment.apps/test-deployment created (server dry run)
 			By("Applying all the Waybills and populating their Status subresource with the results")
 
 			for i := range wbList {
-				Enqueue(runQueue, PollingRun, wbList[i])
+				runQueue.Enqueue(PollingRun, wbList[i])
 			}
 			runner.Stop()
+			testSyncWaybillStatus(wbList...)
 
 			for i := range wbList {
 				wbList[i].Status.LastRun.Output = testStripKubectlWarnings(wbList[i].Status.LastRun.Output)
@@ -317,19 +324,20 @@ deployment.apps/test-deployment created (server dry run)
 					Command:      "",
 					Commit:       headCommitHash,
 					ErrorMessage: "exit status 1",
-					Finished:     metav1.Time{},
+					Finished:     metav1.NewTime(runStartedAt),
 					Output: `namespace/app-a-kustomize configured
 deployment.apps/test-deployment created
 Error applying Secret(s) [-invalid]; kubectl output has been omitted as it may contain sensitive data.
 `,
-					Started: metav1.Time{},
+					Started: metav1.NewTime(runStartedAt),
 					Success: false,
 					Type:    PollingRun.String(),
 				},
 			}
 
-			Enqueue(runQueue, PollingRun, &waybill)
+			runQueue.Enqueue(PollingRun, &waybill)
 			runner.Stop()
+			testSyncWaybillStatus(&waybill)
 
 			waybill.Status.LastRun.Output = testStripKubectlWarnings(waybill.Status.LastRun.Output)
 			Expect(waybill).Should(matchWaybill(expected, kubeCtlPath, kustomizePath, runner.RepoPath, applyOptions.pruneWhitelist(&waybill, runner.PruneBlacklist)))
@@ -390,9 +398,9 @@ Error applying Secret(s) [-invalid]; kubectl output has been omitted as it may c
 					Command:      "",
 					Commit:       headCommitHash,
 					ErrorMessage: "",
-					Finished:     metav1.Time{},
+					Finished:     metav1.NewTime(runStartedAt),
 					Output:       `(?s)namespace/app-d (unchanged|configured)\ndeployment\.apps/test-deployment created\n`,
-					Started:      metav1.Time{},
+					Started:      metav1.NewTime(runStartedAt),
 					Success:      true,
 					Type:         PollingRun.String(),
 				},
@@ -405,7 +413,7 @@ Error applying Secret(s) [-invalid]; kubectl output has been omitted as it may c
 				expected[i].Status = kubeapplierv1alpha1.WaybillStatus{LastRun: expectedStatus[i]}
 			}
 
-			Enqueue(runQueue, PollingRun, wbList[0])
+			runQueue.Enqueue(PollingRun, wbList[0])
 
 			Eventually(
 				func() error {
@@ -417,6 +425,7 @@ Error applying Secret(s) [-invalid]; kubectl output has been omitted as it may c
 			).Should(BeNil())
 
 			runner.Stop()
+			testSyncWaybillStatus(wbList...)
 
 			for i := range wbList {
 				if wbList[i].Status.LastRun != nil {
@@ -478,9 +487,9 @@ AGE-SECRET-KEY-1GNC98E3WNPAXE49FATT434CFC2THV5Q0SLW45T3VNYUVZ4F8TY6SREQR9Q`,
 					Command:      "",
 					Commit:       headCommitHash,
 					ErrorMessage: "",
-					Finished:     metav1.Time{},
+					Finished:     metav1.NewTime(runStartedAt),
 					Output:       `(?s)namespace/strongbox-age (unchanged|configured)\ndeployment\.apps/test-deployment created\n`,
-					Started:      metav1.Time{},
+					Started:      metav1.NewTime(runStartedAt),
 					Success:      true,
 					Type:         PollingRun.String(),
 				},
@@ -493,7 +502,7 @@ AGE-SECRET-KEY-1GNC98E3WNPAXE49FATT434CFC2THV5Q0SLW45T3VNYUVZ4F8TY6SREQR9Q`,
 				expected[i].Status = kubeapplierv1alpha1.WaybillStatus{LastRun: expectedStatus[i]}
 			}
 
-			Enqueue(runQueue, PollingRun, wbList[0])
+			runQueue.Enqueue(PollingRun, wbList[0])
 
 			Eventually(
 				func() error {
@@ -505,6 +514,7 @@ AGE-SECRET-KEY-1GNC98E3WNPAXE49FATT434CFC2THV5Q0SLW45T3VNYUVZ4F8TY6SREQR9Q`,
 			).Should(BeNil())
 
 			runner.Stop()
+			testSyncWaybillStatus(wbList...)
 
 			for i := range wbList {
 				if wbList[i].Status.LastRun != nil {
@@ -598,11 +608,11 @@ AGE-SECRET-KEY-1GNC98E3WNPAXE49FATT434CFC2THV5Q0SLW45T3VNYUVZ4F8TY6SREQR9Q`,
 					Command:      "",
 					Commit:       headCommitHash,
 					ErrorMessage: "",
-					Finished:     metav1.Time{},
+					Finished:     metav1.NewTime(runStartedAt),
 					Output: `namespace/app-e configured
 deployment.apps/test-deployment created
 `,
-					Started: metav1.Time{},
+					Started: metav1.NewTime(runStartedAt),
 					Success: true,
 					Type:    PollingRun.String(),
 				},
@@ -616,7 +626,7 @@ deployment.apps/test-deployment created
 			}
 
 			for i := range wbList {
-				Enqueue(runQueue, PollingRun, wbList[i])
+				runQueue.Enqueue(PollingRun, wbList[i])
 			}
 
 			Eventually(
@@ -635,6 +645,10 @@ deployment.apps/test-deployment created
 			})
 
 			runner.Stop()
+			// Only the Waybill that reached the apply run has a status
+			// assertion below; the pre-apply failures are covered by
+			// their events.
+			testSyncWaybillStatus(wbList[3])
 
 			for i := range wbList {
 				if wbList[i].Status.LastRun != nil {
@@ -650,30 +664,6 @@ deployment.apps/test-deployment created
 				`kube_applier_run_queue{namespace="app-e-notfound",type="Git polling run"} 0`,
 				`kube_applier_run_queue{namespace="app-e-wrongtype",type="Git polling run"} 0`,
 				`kube_applier_run_queue{namespace="app-e",type="Git polling run"} 0`,
-			})
-		})
-	})
-
-	Context("When it fails to enqueue a run request", func() {
-		It("Should increase the respective metrics counter", func() {
-			smallRunQueue := make(chan Request, 1)
-			Enqueue(smallRunQueue, PollingRun, &kubeapplierv1alpha1.Waybill{
-				TypeMeta:   metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-				ObjectMeta: metav1.ObjectMeta{Name: "appD", Namespace: "queued-ok"},
-			})
-			Enqueue(smallRunQueue, PollingRun, &kubeapplierv1alpha1.Waybill{
-				TypeMeta:   metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-				ObjectMeta: metav1.ObjectMeta{Name: "appD", Namespace: "failed-to-queue"},
-			})
-			testMetrics([]string{
-				`kube_applier_run_queue_failures{namespace="failed-to-queue",type="Git polling run"} 1`,
-			})
-			Enqueue(smallRunQueue, PollingRun, &kubeapplierv1alpha1.Waybill{
-				TypeMeta:   metav1.TypeMeta{APIVersion: "kube-applier.io/v1alpha1", Kind: "Waybill"},
-				ObjectMeta: metav1.ObjectMeta{Name: "appD", Namespace: "failed-to-queue"},
-			})
-			testMetrics([]string{
-				`kube_applier_run_queue_failures{namespace="failed-to-queue",type="Git polling run"} 2`,
 			})
 		})
 	})
@@ -893,16 +883,20 @@ var _ = Describe("Run Queue", func() {
 				},
 			}
 
-			fakeRunQueue := make(chan Request, 4)
-			Enqueue(fakeRunQueue, ScheduledRun, &waybill)
-			Enqueue(fakeRunQueue, PollingRun, &waybill)
-			Enqueue(fakeRunQueue, ForcedRun, &waybill)
-
-			close(fakeRunQueue)
+			fakeRunQueue := NewQueue()
+			fakeRunQueue.Enqueue(ScheduledRun, &waybill)
+			fakeRunQueue.Enqueue(PollingRun, &waybill)
+			fakeRunQueue.Enqueue(ForcedRun, &waybill)
+			fakeRunQueue.ShutDown()
 
 			res := []Request{}
-			for req := range fakeRunQueue {
+			for {
+				req, key, shutdown := fakeRunQueue.Get()
+				if shutdown {
+					break
+				}
 				res = append(res, req)
+				fakeRunQueue.Done(key)
 			}
 			Expect(res).To(Equal([]Request{
 				{Type: ForcedRun, Waybill: &waybill},
@@ -969,16 +963,15 @@ func matchWaybill(expected kubeapplierv1alpha1.Waybill, kubectlPath, kustomizePa
 			"Command":      commandMatcher,
 			"Commit":       Equal(expected.Status.LastRun.Commit),
 			"ErrorMessage": Equal(expected.Status.LastRun.ErrorMessage),
-			"Finished": And(
-				Equal(expected.Status.LastRun.Finished),
-				// Ideally we would be comparing to actual's Started but since it
-				// should be equal to expected' Started, this is equivalent.
-				MatchAllFields(Fields{
-					"Time": BeTemporally(">=", expected.Status.LastRun.Started.Time),
-				}),
-			),
-			"Output":  outputMatcher,
-			"Started": Equal(expected.Status.LastRun.Started),
+			// The runner stamps these from its clock, so only assert they
+			// are set at or after the expected start of the run.
+			"Finished": MatchAllFields(Fields{
+				"Time": BeTemporally(">=", expected.Status.LastRun.Finished.Time),
+			}),
+			"Output": outputMatcher,
+			"Started": MatchAllFields(Fields{
+				"Time": BeTemporally(">=", expected.Status.LastRun.Started.Time),
+			}),
 			"Success": Equal(expected.Status.LastRun.Success),
 			"Type":    Equal(expected.Status.LastRun.Type),
 		}))
@@ -991,6 +984,17 @@ func matchWaybill(expected kubeapplierv1alpha1.Waybill, kubectlPath, kustomizePa
 			"LastRun": lastRunMatcher,
 		}),
 	})
+}
+
+// testSyncWaybillStatus replaces the Status of the given Waybills with the one
+// recorded on the apiserver, since the queue hands workers a DeepCopy and the
+// local objects are never mutated by a run.
+func testSyncWaybillStatus(waybills ...*kubeapplierv1alpha1.Waybill) {
+	for _, wb := range waybills {
+		updated, err := k8sClient.GetWaybill(context.TODO(), wb.Namespace, wb.Name)
+		Expect(err).To(BeNil())
+		wb.Status = updated.Status
+	}
 }
 
 func testStripKubectlWarnings(output string) string {

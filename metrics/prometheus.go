@@ -9,7 +9,7 @@
 //   - kube_applier_result_summary{"namespace", "type", "name", "action"}
 //   - kube_applier_last_run_timestamp_seconds{"namespace"}
 //   - kube_applier_run_queue{"namespace", "type"}
-//   - kube_applier_run_queue_failures{"namespace", "type"}
+//   - kube_applier_run_queue_deduplicated{"namespace", "type"}
 //   - kube_applier_waybill_spec_auto_apply{"namespace"}
 //   - kube_applier_waybill_spec_dry_run{"namespace"}
 //   - kube_applier_waybill_spec_run_interval{"namespace"}
@@ -60,8 +60,9 @@ var (
 	lastRunTimestamp *prometheus.GaugeVec
 	// runQueue is a Gauge vector of active run requests
 	runQueue *prometheus.GaugeVec
-	// runQueueFailures is a Counter vector of failed queue attempts
-	runQueueFailures *prometheus.CounterVec
+	// runQueueDeduplicated is a Counter vector of run requests merged into
+	// an already queued request
+	runQueueDeduplicated *prometheus.CounterVec
 	// waybillSpecAutoApply is a Gauge vector that captures a Waybill's
 	// autoApply attribute
 	waybillSpecAutoApply *prometheus.GaugeVec
@@ -187,10 +188,10 @@ func init() {
 			"type",
 		},
 	)
-	runQueueFailures = promauto.NewCounterVec(prometheus.CounterOpts{
+	runQueueDeduplicated = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: metricsNamespace,
-		Name:      "run_queue_failures",
-		Help:      "Number of run requests queue failures",
+		Name:      "run_queue_deduplicated",
+		Help:      "Number of run requests merged into an already queued request",
 	},
 		[]string{
 			// Namespace of the Waybill applied
@@ -234,9 +235,10 @@ func init() {
 	)
 }
 
-// AddRunRequestQueueFailure increments the counter of failed queue attempts
-func AddRunRequestQueueFailure(t string, waybill *kubeapplierv1alpha1.Waybill) {
-	runQueueFailures.With(prometheus.Labels{
+// AddRunRequestQueueDeduplicated increments the counter of run requests that
+// were merged into an already queued request
+func AddRunRequestQueueDeduplicated(t string, waybill *kubeapplierv1alpha1.Waybill) {
+	runQueueDeduplicated.With(prometheus.Labels{
 		"namespace": waybill.Namespace,
 		"type":      t,
 	}).Inc()
@@ -369,7 +371,7 @@ func Reset() {
 	lastRunSuccess.Reset()
 	lastRunTimestamp.Reset()
 	runQueue.Reset()
-	runQueueFailures.Reset()
+	runQueueDeduplicated.Reset()
 	waybillSpecAutoApply.Reset()
 	waybillSpecDryRun.Reset()
 	waybillSpecRunInterval.Reset()

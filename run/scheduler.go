@@ -53,7 +53,7 @@ type Scheduler struct {
 	KubeClient          *client.Client
 	Repository          *git.Repository
 	RepoPath            string
-	RunQueue            chan<- Request
+	RunQueue            *Queue
 	WaybillPollInterval time.Duration
 	waybills            map[string]*kubeapplierv1alpha1.Waybill
 	waybillSchedulers   map[string]func()
@@ -98,6 +98,27 @@ func (s *Scheduler) Stop() {
 	s.waybillSchedulers = nil
 	s.waybills = nil
 	s.waybillsMutex.Unlock()
+}
+
+// RecordRun updates the Scheduler's cached Waybill with the status of a
+// completed run. Without it the git polling loop keeps diffing from the commit
+// recorded before the run until the next apiserver poll, and would enqueue a
+// redundant run if HEAD moves in that window.
+func (s *Scheduler) RecordRun(waybill *kubeapplierv1alpha1.Waybill) {
+	if waybill == nil {
+		return
+	}
+	s.waybillsMutex.Lock()
+	defer s.waybillsMutex.Unlock()
+	cached, ok := s.waybills[waybill.Namespace]
+	if !ok || cached.Name != waybill.Name {
+		return
+	}
+	// waybillsWithGitChanges reads the cached pointers outside the lock, so
+	// replace the entry instead of mutating it in place.
+	updated := cached.DeepCopy()
+	updated.Status = *waybill.Status.DeepCopy()
+	s.waybills[waybill.Namespace] = updated
 }
 
 func (s *Scheduler) updateWaybills() {
@@ -164,7 +185,7 @@ func (s *Scheduler) gitPollingLoop() {
 		select {
 		case <-time.After(s.GitPollWait):
 			for _, wb := range s.waybillsWithGitChanges() {
-				Enqueue(s.RunQueue, PollingRun, wb)
+				s.RunQueue.Enqueue(PollingRun, wb)
 			}
 		case <-s.stop:
 			return
@@ -175,8 +196,7 @@ func (s *Scheduler) gitPollingLoop() {
 // waybillsWithGitChanges returns Waybills whose repository path has
 // changed since their last recorded commit. It updates gitLastQueuedHash
 // under the lock and returns a slice of affected Waybills so that callers
-// can enqueue runs outside the lock, avoiding blocking channel sends while
-// holding waybillsMutex.
+// can enqueue runs outside the lock.
 //
 // This check prevents the Scheduler from queueing multiple runs for a
 // Waybill; without it, when a new commit appears a Waybill will be eligible
@@ -225,7 +245,7 @@ func (s *Scheduler) waybillsWithGitChanges() []*kubeapplierv1alpha1.Waybill {
 			// "" to git diff. Best-effort: gated on HEAD moving (see the
 			// gitLastQueuedHash guard above), so autoApply Waybills also
 			// self-heal via the Scheduled run, but autoApply-disabled ones
-			// need a ForcedRun since Enqueue drops everything else.
+			// need a ForcedRun since the queue drops everything else.
 			result = append(result, waybills[i])
 			continue
 		}
@@ -258,12 +278,12 @@ func (s *Scheduler) newWaybillLoop(waybill *kubeapplierv1alpha1.Waybill) func() 
 		// If it's been too long, it will still trigger immediately since the
 		// wait duration is going to be negative.
 		if waybill.Status.LastRun == nil {
-			Enqueue(s.RunQueue, ScheduledRun, waybill)
+			s.RunQueue.Enqueue(ScheduledRun, waybill)
 		} else {
 			runAt := waybill.Status.LastRun.Started.Add(time.Duration(waybill.Spec.RunInterval) * time.Second)
 			select {
 			case <-time.After(runAt.Sub(s.Clock.Now())):
-				Enqueue(s.RunQueue, ScheduledRun, waybill)
+				s.RunQueue.Enqueue(ScheduledRun, waybill)
 			case <-stop:
 				return
 			}
@@ -273,7 +293,7 @@ func (s *Scheduler) newWaybillLoop(waybill *kubeapplierv1alpha1.Waybill) func() 
 		for {
 			select {
 			case <-ticker.C:
-				Enqueue(s.RunQueue, ScheduledRun, waybill)
+				s.RunQueue.Enqueue(ScheduledRun, waybill)
 			case <-stop:
 				return
 			}
