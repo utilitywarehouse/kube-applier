@@ -235,7 +235,7 @@ func TestWaybillsWithGitChanges(t *testing.T) {
 			"changed-b": {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "changed-b"},
 				Spec: kubeapplierv1alpha1.WaybillSpec{
-					AutoApply:      ptr.To(false), // autoApply=false: still returned, Enqueue drops it
+					AutoApply:      ptr.To(false), // autoApply=false: still returned, the queue drops it
 					RepositoryPath: "app-a-kustomize",
 				},
 				Status: kubeapplierv1alpha1.WaybillStatus{

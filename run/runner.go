@@ -34,8 +34,6 @@ import (
 
 const (
 	defaultRunnerWorkerCount = 2
-	defaultWorkerQueueSize   = 512
-	enqueueTimeout           = 5 * time.Second
 
 	hostFragment = `Host %s_github_com
     HostName github.com
@@ -72,6 +70,12 @@ func checkSecretIsAllowed(waybill *kubeapplierv1alpha1.Waybill, secret *corev1.S
 	}
 
 	return fmt.Errorf(`secret "%s/%s" cannot be used in namespace "%s", the namespace must be listed in the '%s' annotation`, secret.Namespace, secret.Name, waybill.Namespace, secretAllowedNamespacesAnnotation)
+}
+
+// RunRecorder is implemented by the Scheduler to keep its cached Waybills in
+// step with completed runs.
+type RunRecorder interface {
+	RecordRun(*kubeapplierv1alpha1.Waybill)
 }
 
 // Request defines an apply run request
@@ -136,14 +140,17 @@ type Runner struct {
 	PruneBlacklist       []string
 	RepoPath             string
 	Repository           *git.Repository
-	Strongbox            StrongboxInterface
-	WorkerCount          int
-	workerGroup          *sync.WaitGroup
-	workerQueue          chan Request
+	// RunRecorder is told about the status of every run that was persisted,
+	// so the scheduler does not need the Waybill it queued to be mutated.
+	RunRecorder RunRecorder
+	Strongbox   StrongboxInterface
+	WorkerCount int
+	workerGroup *sync.WaitGroup
+	workerQueue *Queue
 }
 
-// Start runs a continuous loop that starts a new run when a request comes into the queue channel.
-func (r *Runner) Start() chan<- Request {
+// Start runs a continuous loop that starts a new run when a request comes into the queue.
+func (r *Runner) Start() *Queue {
 	if r.workerGroup != nil {
 		log.Logger("runner").Info("Runner is already started, will not do anything")
 		return nil
@@ -151,7 +158,7 @@ func (r *Runner) Start() chan<- Request {
 	if r.WorkerCount <= 0 {
 		r.WorkerCount = defaultRunnerWorkerCount
 	}
-	r.workerQueue = make(chan Request, defaultWorkerQueueSize)
+	r.workerQueue = NewQueue()
 	r.workerGroup = &sync.WaitGroup{}
 	r.workerGroup.Add(r.WorkerCount)
 	for i := 0; i < r.WorkerCount; i++ {
@@ -162,10 +169,19 @@ func (r *Runner) Start() chan<- Request {
 
 func (r *Runner) applyWorker() {
 	defer r.workerGroup.Done()
-	for request := range r.workerQueue {
-		if err := r.processRequest(request); err != nil {
-			r.captureRequestFailure(request, err)
+	for {
+		request, key, shutdown := r.workerQueue.Get()
+		if shutdown {
+			return
 		}
+		// Get returns an empty request if its pending entry went missing,
+		// which should not happen, so skip rather than dereferencing nil.
+		if request.Waybill != nil {
+			if err := r.processRequest(request); err != nil {
+				r.captureRequestFailure(request, err)
+			}
+		}
+		r.workerQueue.Done(key)
 	}
 }
 
@@ -232,6 +248,8 @@ func (r *Runner) processRequest(request Request) error {
 	if err := r.updateWaybillStatus(ctx, request.Waybill); err != nil {
 		log.Logger("runner").Warn("Could not update Waybill status", "waybill", wbId, "error", err)
 		r.KubeClient.EmitWaybillEvent(request.Waybill, corev1.EventTypeWarning, "WaybillUpdateStatusFailed", "%s", err.Error())
+	} else if r.RunRecorder != nil {
+		r.RunRecorder.RecordRun(request.Waybill)
 	}
 
 	if request.Waybill.Status.LastRun.Success {
@@ -321,7 +339,7 @@ func (r *Runner) Stop() {
 	if r.workerGroup == nil {
 		return
 	}
-	close(r.workerQueue)
+	r.workerQueue.ShutDown()
 	r.workerGroup.Wait()
 	r.workerGroup = nil
 }
@@ -564,23 +582,5 @@ func (r *Runner) apply(ctx context.Context, rootPath, token string, waybill *kub
 		waybill.Status.LastRun.ErrorMessage = err.Error()
 	} else {
 		waybill.Status.LastRun.Success = true
-	}
-}
-
-// Enqueue attempts to add a run request to the queue, timing out after 5
-// seconds.
-func Enqueue(queue chan<- Request, t Type, waybill *kubeapplierv1alpha1.Waybill) {
-	wbId := fmt.Sprintf("%s/%s", waybill.Namespace, waybill.Name)
-	if t != ForcedRun && !ptr.Deref(waybill.Spec.AutoApply, true) {
-		log.Logger("runner").Debug("Run ignored, waybill autoApply is disabled", "waybill", wbId, "type", t)
-		return
-	}
-	select {
-	case queue <- Request{Type: t, Waybill: waybill}:
-		log.Logger("runner").Debug("Run queued", "waybill", wbId, "type", t)
-		metrics.UpdateRunRequest(t.String(), waybill, 1)
-	case <-time.After(enqueueTimeout):
-		log.Logger("runner").Error("Timed out trying to queue a run, run queue is full", "waybill", wbId, "type", t)
-		metrics.AddRunRequestQueueFailure(t.String(), waybill)
 	}
 }

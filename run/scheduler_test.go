@@ -19,18 +19,23 @@ import (
 	"github.com/utilitywarehouse/kube-applier/metrics"
 )
 
-func testSchedulerDrainRequests(requests <-chan Request) (func() []Request, func()) {
+func testSchedulerDrainRequests(queue *Queue) (func() []Request, func()) {
 	m := sync.Mutex{}
 	reqs := []Request{}
 	finished := make(chan bool)
 
 	go func() {
-		for r := range requests {
+		for {
+			r, key, shutdown := queue.Get()
+			if shutdown {
+				close(finished)
+				return
+			}
 			m.Lock()
 			reqs = append(reqs, r)
 			m.Unlock()
+			queue.Done(key)
 		}
-		close(finished)
 	}()
 
 	return func() []Request {
@@ -48,14 +53,14 @@ func testSchedulerDrainRequests(requests <-chan Request) (func() []Request, func
 
 var _ = Describe("Scheduler", func() {
 	var (
-		testRunQueue              chan Request
+		testRunQueue              *Queue
 		testScheduler             Scheduler
 		testSchedulerRequests     func() []Request
 		testSchedulerRequestsWait func()
 	)
 
 	BeforeEach(func() {
-		testRunQueue = make(chan Request)
+		testRunQueue = NewQueue()
 		testSchedulerRequests, testSchedulerRequestsWait = testSchedulerDrainRequests(testRunQueue)
 		testScheduler = Scheduler{
 			WaybillPollInterval: 500 * time.Millisecond,
@@ -158,7 +163,7 @@ var _ = Describe("Scheduler", func() {
 			}))
 
 			testScheduler.Stop()
-			close(testRunQueue)
+			testRunQueue.ShutDown()
 			testSchedulerRequestsWait()
 		})
 

@@ -187,17 +187,18 @@ func main() {
 		WorkerCount:          *fWorkerCount,
 	}
 
-	runQueue := runner.Start()
-
 	scheduler := &run.Scheduler{
 		Clock:               clk,
 		GitPollWait:         *fGitPollWait,
 		KubeClient:          kubeClient,
 		Repository:          repo,
 		RepoPath:            *fRepoPath,
-		RunQueue:            runQueue,
 		WaybillPollInterval: *fWaybillPollInterval,
 	}
+	// Set before Start so workers never read it while it is being written.
+	runner.RunRecorder = scheduler
+	runQueue := runner.Start()
+	scheduler.RunQueue = runQueue
 	scheduler.Start()
 
 	webserver := &webserver.WebServer{

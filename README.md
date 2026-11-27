@@ -336,10 +336,11 @@ the Prometheus default metrics, the following custom metrics are included:
   that reports the number of runs that are currently queued, labelled with the
   namespace name and the run type.
 
-- **kube_applier_run_queue_failures** - A
+- **kube_applier_run_queue_deduplicated** - A
   [Counter](https://godoc.org/github.com/prometheus/client_golang/prometheus#Counter)
-  that observes the number of times a run failed to queue properly, labelled
-  with the namespace name and the run type.
+  that observes the number of run requests that were merged into an already
+  queued request for the same Waybill, labelled with the namespace name and the
+  run type of the incoming request.
 
 - **kube_applier_waybill_spec_auto_apply** - A
   [Gauge](https://godoc.org/github.com/prometheus/client_golang/prometheus#Gauge)
